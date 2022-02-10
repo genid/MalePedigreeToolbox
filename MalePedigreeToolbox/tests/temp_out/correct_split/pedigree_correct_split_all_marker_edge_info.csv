@@ -1,0 +1,4 @@
+edge_id,marker,parent_allele,child_allele
+aa,marker1,1,4
+ab,marker1,4,6
+ac,marker1,6,4

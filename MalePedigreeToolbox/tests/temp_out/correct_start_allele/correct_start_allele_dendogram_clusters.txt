@@ -1,0 +1,6 @@
+cluster 1:
+b
+
+cluster 2:
+a
+c

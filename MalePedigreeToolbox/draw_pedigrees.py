@@ -1,0 +1,405 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Module for drawing dendograms and MDS plots based on mutation differentiation.
+
+Author: Bram van Wersch
+
+NOTE:
+IMPORTANT: Python3.7 or higher needs to be used because this script relies on sorted dictionaries
+"""
+
+# library imports
+from pathlib import Path
+import numpy as np
+import logging
+from math import log10
+import os
+import warnings
+from typing import List, Tuple, TYPE_CHECKING, Union, Dict
+from collections import defaultdict
+
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import squareform
+
+from sklearn.manifold import MDS
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import silhouette_score  # calinski_harabasz_score, davies_bouldin_score other options
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+# own imports
+from MalePedigreeToolbox import utility
+from MalePedigreeToolbox import thread_termination
+
+
+if TYPE_CHECKING:
+    import argparse
+
+
+warnings.filterwarnings(action='ignore', category=UserWarning)
+
+matplotlib.use('Agg')
+
+LOG: logging.Logger = logging.getLogger("mpt")
+
+LINKAGE_METHOD = "complete"
+
+
+@thread_termination.ThreadTerminable
+def main(
+    name_space: "argparse.Namespace"
+):
+    """Main entry point for this module"""
+    LOG.info("Starting with creating dendograms based on mutation differentiation")
+    input_file = name_space.full_marker_csv
+    marker_rates_file = name_space.marker_rates
+    outdir = Path(name_space.outdir)
+    min_distance = name_space.min_dist
+    random_state = name_space.random_state
+    plot_choice = name_space.type
+    requested_clusters = name_space.clusters
+    cluster_list = get_requested_cluster_list(requested_clusters)
+
+    with open(input_file) as f:
+        lines = f.readlines()
+
+    lines = adjust_fo_file_values(lines, marker_rates_file)
+
+    covered_lines = 0
+    prev_total = 0
+    shown_cluster_warning = [False]
+    for index, pedigree_lines in enumerate(get_pedigree_lines(lines)):
+        pedigree_name = pedigree_lines[0][1]
+
+        # decide number of clusters as defined by user
+        requested_cluster_nr = get_nr_of_clusters(cluster_list, index, shown_cluster_warning)
+        dist_mat, colnames = get_distance_matrix(pedigree_lines, min_distance)
+        pedigree_dir = create_pedigree_dir(outdir, pedigree_name)
+
+        # make sure the requested number of clusters is allowed
+        if requested_cluster_nr is not None and requested_cluster_nr > len(dist_mat):
+            LOG.error(f"The number of clusters can not be bigger than the number of datapoints. Got "
+                      f"{requested_cluster_nr} clusters for pedigree {pedigree_lines[0][1]}.")
+            raise utility.MalePedigreeToolboxError(f"The number of clusters can not be bigger than the number of"
+                                                   f" datapoints. Got {requested_cluster_nr} clusters for pedigree"
+                                                   f" {pedigree_lines[0][1]}.")
+
+        # write the dendrogram
+        if plot_choice in ('dendrogram', 'both'):
+            LOG.debug(f"Writing dendogram for {pedigree_name}")
+            draw_dendrogram(dist_mat, colnames, pedigree_dir, pedigree_name, requested_cluster_nr)
+            LOG.debug(f"Finished making dendrogram plot for pedigree {pedigree_name}")
+
+        # write the mds plot
+        if plot_choice in ('MDS', 'both'):
+            LOG.debug(f"Writing MDS for {pedigree_name}")
+            draw_write_mds(dist_mat, colnames, pedigree_dir, pedigree_name, random_state, requested_cluster_nr)
+            LOG.debug(f"Finished making MDS plot for pedigree {pedigree_name}")
+        covered_lines += len(pedigree_lines)
+
+        # update user periodically
+        total, remainder = divmod(covered_lines / len(lines), 0.05)
+        if total != prev_total:
+            LOG.info(f"Calculation progress: {round(5 * total)}%...")
+            prev_total = total
+
+    LOG.info("Finished drawing dendograms for all pedigrees that were present")
+
+
+@thread_termination.ThreadTerminable
+def get_requested_cluster_list(
+    requested_clusters: Union[str, None]
+) -> Union[None, List[int]]:
+    """Get the number of clusters requested for all the different pedigrees that need to be drawn"""
+    if requested_clusters is None:
+        return None
+    requested_cluser_numbers = []
+    for value in requested_clusters:
+        if isinstance(value, int):
+            requested_cluser_numbers.append(value)
+        else:  # in case of file
+            with open(value) as f:
+                try:
+                    requested_cluser_numbers.extend(map(int, f.read().split()))
+                except ValueError:
+                    LOG.error(f"Invalid integer provided for the number of clusters in file {value}. Make sure that"
+                              f"the cluster numbers are seperated by spaces.")
+                    raise utility.MalePedigreeToolboxError(f"Invalid integer provided for the number of clusters in"
+                                                           f" file {value}. Make sure that the cluster numbers are"
+                                                           f" seperated by spaces.")
+    return requested_cluser_numbers
+
+
+@thread_termination.ThreadTerminable
+def get_nr_of_clusters(
+    cluster_list: Union[None, List[int]],
+    current_index: int,
+    shown_cluster_warning: List[bool]
+) -> Union[None, List[int]]:
+    """Get the number of clusters that the user provided/expects for the current pedigree"""
+    if cluster_list is None:
+        requested_cluster_nr = None
+    elif len(cluster_list) == 1:
+        requested_cluster_nr = cluster_list[0]
+    else:
+        if current_index < len(cluster_list):
+            requested_cluster_nr = cluster_list[current_index]
+        else:
+            if not shown_cluster_warning[0]:
+                LOG.warning("Not all pedigrees have gotten a number of clusters assigned. Switching over to "
+                            "automatic calculation.")
+                shown_cluster_warning[0] = True
+            requested_cluster_nr = None
+    return requested_cluster_nr
+
+
+@thread_termination.ThreadTerminable
+def adjust_fo_file_values(
+    lines: List[str],
+    marker_rates_file: Union[Path, None]
+) -> List[List[Union[str, float]]]:
+    """Wheigh the line values based on mutation rates to better represent the importance of all the values.
+
+    If no marker rates file is provided the default weight is 1 preserving the original values
+    """
+    if marker_rates_file is not None:
+        marker_rate_dict = read_marker_rate_file(marker_rates_file)
+    else:
+        marker_rate_dict = defaultdict(lambda: 1)
+
+    all_summary_lines = []
+    values: List[Union[str, float]] = lines[1].strip().split(",")
+    try:
+        summary_lines = [values[:4] + [float(values[-1]) * get_weight(marker_rate_dict[values[4]])]]
+        for line in lines[2:]:
+            values = line.strip().split(",")
+            # a new dendogram begins
+            if values[2:4] != summary_lines[-1][2:4] or values[1] != summary_lines[-1][1]:
+                total_wheighted_mutations = 0
+                for sline in summary_lines:
+                    total_wheighted_mutations += sline[-1]
+                all_summary_lines.append(summary_lines[0][:4] + [total_wheighted_mutations])
+                summary_lines = [values[:4] + [float(values[-1]) *
+                                               get_weight(marker_rate_dict[values[4]])]]
+            else:
+                summary_lines.append(
+                    values[:4] + [float(values[-1]) * get_weight(marker_rate_dict[values[4]])]
+                )
+    except KeyError:
+        LOG.error(f"Marker file is incomplete. Marker {values[4]} is missing.")
+        raise utility.MalePedigreeToolboxError(f"Marker file is incomplete. Marker {values[4]} is missing.")
+    # make sure to do the last one
+    total_wheighted_mutations = 0
+    for sline in summary_lines:
+        total_wheighted_mutations += sline[-1]
+    all_summary_lines.append(summary_lines[0][:4] + [total_wheighted_mutations])
+    return all_summary_lines
+
+
+def get_weight(
+    value: float
+) -> float:
+    """Weight calculation function"""
+    if value == 1 or value == 0:
+        return 1
+    return - log10(value)
+
+
+@thread_termination.ThreadTerminable
+def read_marker_rate_file(
+    file: Path
+) -> Dict[str, float]:
+    """Read a marker rate file tho weight the number of mutations of all alleles"""
+    rate_dict = {}
+    with open(file) as f:
+        f.readline()  # ignore the header
+        for line in f:
+            try:
+                marker, rate = line.strip().split(",")
+                rate = float(rate)
+            except Exception:
+                LOG.error("Failed to read marker rates file. The format of the file is not as expected. The file needs"
+                          " a header and 2 columns. The first one being the marker names and the second one being the "
+                          "marker rates.")
+                raise utility.MalePedigreeToolboxError("Failed to reda marker rates file. The format of the file is "
+                                                       "not as expected. The file needs a header and 2 columns. The "
+                                                       "first one being the marker names and the second one being the "
+                                                       "marker rates.")
+            rate_dict[marker] = rate
+    return rate_dict
+
+
+@thread_termination.ThreadTerminable
+def create_pedigree_dir(
+    outdir: Path,
+    pedigree_name: str
+) -> Path:
+    """Create the directory containing the files generated by this module"""
+    pedigree_name = utility.sanitize_string(pedigree_name)
+    pedigree_dir = outdir / pedigree_name
+    # make directories for each
+    try:
+        os.mkdir(pedigree_dir)
+    except FileExistsError:
+        pass
+    except IOError as e:
+        LOG.error(f"Failed to create subfolder in output folder; {outdir}. Error code: {str(e)}")
+        raise utility.MalePedigreeToolboxError(f"Failed to create subfolder in output folder; {outdir}."
+                                               f" Error code: {str(e)}")
+    return pedigree_dir
+
+
+def get_pedigree_lines(
+    lists: List[List[Union[str, float]]]
+) -> List[List[List[str]]]:
+    """Splits the input file based on pedigrees and returns connections of nodes and respective mutation
+    differentiation"""
+    dendogram_lines = [lists[0]]
+    for list_ in lists:
+        # a new dendogram begins
+        if list_[1] != dendogram_lines[-1][1]:
+            yield dendogram_lines
+            dendogram_lines = [list_]
+        else:
+            dendogram_lines.append(list_)
+    yield dendogram_lines
+
+
+@thread_termination.ThreadTerminable
+def get_distance_matrix(
+    pedigree_lines: List[List[str]],
+    min_dist: float
+) -> Tuple[np.ndarray, List[str]]:
+    """Get a distance matrix based connections of nodes in a pedigree"""
+    pedigree_dict = {}
+    for values in pedigree_lines:
+        node1 = values[2]
+        node2 = values[3]
+        mutation_distance = float(values[4])
+        if node1 not in pedigree_dict:
+            pedigree_dict[node1] = {node2: mutation_distance}
+        else:
+            pedigree_dict[node1][node2] = mutation_distance
+
+        if node2 not in pedigree_dict:
+            pedigree_dict[node2] = {node1: mutation_distance}
+        else:
+            pedigree_dict[node2][node1] = mutation_distance
+    dist_mat = np.zeros((len(pedigree_dict), len(pedigree_dict)), float)
+    for r_index, key1 in enumerate(pedigree_dict):
+        for c_index, key2 in enumerate(pedigree_dict):
+            if key1 == key2:
+                continue
+            else:
+                mutation_distance = pedigree_dict[key1][key2]
+                if mutation_distance == 0:
+                    mutation_distance = min_dist
+                dist_mat[r_index, c_index] = mutation_distance
+    return dist_mat, list(pedigree_dict.keys())
+
+
+@thread_termination.ThreadTerminable
+def draw_dendrogram(
+    dist_mat: np.ndarray,
+    names: List[str],
+    outdir: Path,
+    pedigree_name: str,
+    requested_cluster_nr: Union[int, None]
+):
+    """Draws the dendograms"""
+    fig = plt.figure(num=1, clear=True)
+    dists = squareform(dist_mat)
+    linkage_matrix = linkage(dists, LINKAGE_METHOD)
+    if requested_cluster_nr is None:
+        best_nr_clusters = max(find_optimal_clustering(dist_mat)) + 1
+    else:
+        best_nr_clusters = requested_cluster_nr
+    ct = linkage_matrix[-(best_nr_clusters-1), 2]
+    dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=ct)  # noqa
+
+    plt.title(f"Pedigree {pedigree_name}")
+    out_path = outdir / f"{pedigree_name}_predicted_dendogram.png"
+    plt.tight_layout()
+    fig.savefig(out_path)
+
+    # write the dendogram clusters
+    leave_order = dendogram_dct["ivl"]
+    leave_colors = dendogram_dct["leaves_color_list"]
+    current_color = leave_colors[0]
+    cluster_nr = 1
+    all_cluster_info = []
+    cluster_info = f"cluster {cluster_nr}:\n"
+
+    for index, color in enumerate(leave_colors):
+        if current_color == color:
+            cluster_info += f"{leave_order[index]}\n"
+        else:
+            current_color = color
+            all_cluster_info.append(cluster_info + "\n")
+            cluster_nr += 1
+            cluster_info = f"cluster {cluster_nr}:\n{leave_order[index]}\n"
+    all_cluster_info.append(cluster_info)
+    with open(outdir / f"{pedigree_name}_dendogram_clusters.txt", "w") as f:
+        f.write(''.join(all_cluster_info))
+
+
+@thread_termination.ThreadTerminable
+def draw_write_mds(
+    dist_mat: np.ndarray,
+    names: List[str],
+    outdir: Path,
+    pedigree_name: str,
+    random_state: int,
+    requested_cluster_nr: Union[int, None]
+):
+    """Draw an MDS plot"""
+    embedding = MDS(n_components=2, random_state=random_state)
+    new_points = embedding.fit_transform(dist_mat)
+    fig = plt.figure(num=1, clear=True)
+
+    if requested_cluster_nr is None:
+        best_labels = find_optimal_clustering(new_points)
+    else:
+        best_labels = AgglomerativeClustering(n_clusters=requested_cluster_nr,  # noqa
+                                              linkage=LINKAGE_METHOD).fit(new_points).labels_
+    plt.title(f"Pedigree {pedigree_name}")
+    plt.scatter(new_points[:, 0], new_points[:, 1], c=best_labels)
+
+    out_path = outdir / f"{pedigree_name}_predicted_multi_dimensional_plot.png"
+    plt.tight_layout()
+    fig.savefig(out_path)
+
+    clusters = [[] for _ in range(max(best_labels) + 1)]
+    for index, label in enumerate(best_labels):
+        clusters[label].append(names[index])  # noqa --> i dont know why pycharm
+
+    with open(outdir / f"{pedigree_name}_multi_dimensional_plot_clusters.txt", "w") as f:
+        for index, cluster in enumerate(clusters):
+            f.write(f"Cluser {index + 1}:\n")
+            f.write('\n'.join(cluster))
+            f.write("\n\n")
+
+
+@thread_termination.ThreadTerminable
+def find_optimal_clustering(
+    points: List[float]
+) -> List[int]:
+    """Calculate the optimal clustering for a set of datapoints for the cluster with the highest silhoute score.
+
+    Return a cluster number for all the provided labels."""
+    if len(points) == 2:
+        return [0, 1]
+
+    hierarchical = AgglomerativeClustering(n_clusters=2, linkage=LINKAGE_METHOD).fit(points)
+    best_score = silhouette_score(points, hierarchical.labels_) # noqa
+    best_labels = hierarchical.labels_  # noqa
+    for k in range(3, len(points)):
+        hierarchical = AgglomerativeClustering(n_clusters=k, linkage=LINKAGE_METHOD).fit(points)
+        score = silhouette_score(points, hierarchical.labels_) # noqa
+        if score > best_score:
+            best_score = score
+            best_labels = hierarchical.labels_  # noqa
+    return best_labels

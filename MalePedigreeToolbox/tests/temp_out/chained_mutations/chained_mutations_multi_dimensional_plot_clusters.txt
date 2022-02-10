@@ -1,0 +1,11 @@
+Cluser 1:
+a
+d
+e
+
+Cluser 2:
+b
+
+Cluser 3:
+c
+

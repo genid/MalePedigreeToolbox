@@ -1,0 +1,8 @@
+cluster 1:
+e
+a
+d
+
+cluster 2:
+b
+c

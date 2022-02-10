@@ -1,0 +1,7 @@
+Cluser 1:
+a
+c
+
+Cluser 2:
+b
+
