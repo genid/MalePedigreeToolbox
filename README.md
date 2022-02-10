@@ -69,7 +69,7 @@ You can check the same for the GUI. This command should start up a GUI.
 $ mpt_gui
 ```
 
-###Execute from main
+### Execute from main
 In case the executable does not work, and you don't want to pip-install the package. You can always clone the GitHub 
 repository and execute the main.py script:
 ```
