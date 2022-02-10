@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 
-with open("README.md") as readme:
+with open("README.rst") as readme:
     long_description = readme.read()
 
 
@@ -23,7 +23,7 @@ setup(
     version=get_version(),
     long_description=long_description,
     packages=find_packages(),
-    url='https://github.com/bramvanwersch/male_pedigree_toolbox.git',
+    url='https://github.com/genid/MalePedigreeToolbox.git',
     entry_points={
         'console_scripts': [
             'mpt=MalePedigreeToolbox.main:main',
@@ -31,7 +31,7 @@ setup(
         ],
     },
     license='MIT',
-    author='bramv',
+    author='bramvw',
     author_email='b.vanwersch@erasmusmc.nl',
     description='tools for getting information from pedigress'
 )

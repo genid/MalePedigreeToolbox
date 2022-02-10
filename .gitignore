@@ -1,3 +1,6 @@
 */__pycache__
 /male_pedigree_toolbox.egg-info/
 */semaphore
+dist
+build
+male_pedigree_toolbox.egg-info
