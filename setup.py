@@ -31,7 +31,7 @@ setup(
     version=get_version(),
     long_description=long_description,
     packages=find_packages(),
-    url='https://github.com/bramvanwersch/male_pedigree_toolbox.git',
+    url='https://github.com/genid/MalePedigreeToolbox.git',
     entry_points={
         'console_scripts': [
             'mpt=MalePedigreeToolbox.main:main',
