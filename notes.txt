@@ -1,6 +1,0 @@
-mpt -f -l debug ped_mut_graph -af Data\mutation_rate_issue\alleles_YFP_RMplex.csv -t Data\mutation_rate_issue\all_TGFs -o testing_mut_rate_issue
-
-
-# notes
-- always create output directory and make defining names for files obsolete --> allows to put log files in those places
-  Bit better then the current approach of in the execution directory
