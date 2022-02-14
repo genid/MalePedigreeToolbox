@@ -18,12 +18,20 @@ def get_version():
     raise RuntimeError("Failed to find version string")
 
 
+def get_requirements():
+    requirements = []
+    with open('requirements.txt') as f:
+        for line in f:
+            requirements.append(line.strip())
+    return requirements
+
+
 setup(
     name='male_pedigree_toolbox',
     version=get_version(),
     long_description=long_description,
     packages=find_packages(),
-    url='https://github.com/genid/MalePedigreeToolbox.git',
+    url='https://github.com/bramvanwersch/male_pedigree_toolbox.git',
     entry_points={
         'console_scripts': [
             'mpt=MalePedigreeToolbox.main:main',
@@ -31,7 +39,8 @@ setup(
         ],
     },
     license='MIT',
-    author='bramvw',
+    author='bramv',
     author_email='b.vanwersch@erasmusmc.nl',
-    description='tools for getting information from pedigress'
+    description='tools for getting information from pedigress',
+    install_requires=get_requirements()
 )
