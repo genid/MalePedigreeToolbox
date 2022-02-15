@@ -72,7 +72,7 @@ command line interface of the toolbox is properly installed:
 .. code-block::
 
    $ mpt --version
-   MalePedigreeToolbox 0.1.10
+   MalePedigreeToolbox 0.1.2
 
 You can check the same for the GUI. This command should start up a GUI.
 
