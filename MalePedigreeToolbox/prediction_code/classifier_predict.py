@@ -31,9 +31,9 @@ matplotlib.use('Agg')
 
 
 if getattr(sys, 'frozen', False):
-    application_path = Path(os.path.dirname(sys.executable))
+    data_path = Path(sys._MEIPASS)
 elif __file__:
-    application_path = Path(os.path.dirname(__file__))
+    data_path = Path(os.path.dirname(__file__))
 else:
     raise SystemExit("Can not find application path.")
 
@@ -69,12 +69,13 @@ YFP_RMPLEX_MARKER_LIST = ['DYS392', 'DYS460', 'DYF1002', 'DYS456', 'DYS627', 'DY
 MARKER_MAPPING = {"RMPLEX": RMPLEX_MARKER_LIST, "PPY23": PPY23_MARKER_LIST, "YFP": YFP_MARKER_LIST,
                   "PPY23_RMPLEX": PPY23_RMPLEX_MARKER_LIST, "YFP_RMPLEX": YFP_RMPLEX_MARKER_LIST}
 
+
 try:
-    MODELS = {"RMPLEX": joblib.load(application_path / "models" / "MLPClassifier_RMPlex.joblib"),
-              "PPY23": joblib.load(application_path / "models" / "MLPClassifier_PPY23.joblib"),
-              "PPY23_RMPLEX": joblib.load(application_path / "models" / "MLPClassifier_PPY23_RMplex.joblib"),
-              "YFP": joblib.load(application_path / "models" / "MLPClassifier_YFP.joblib"),
-              "YFP_RMPLEX": joblib.load(application_path / "models" / "MLPClassifier_YFP_RMplex.joblib")}
+    MODELS = {"RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_RMPlex.joblib"),
+              "PPY23": joblib.load(data_path / "models" / "MLPClassifier_PPY23.joblib"),
+              "PPY23_RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_PPY23_RMplex.joblib"),
+              "YFP": joblib.load(data_path / "models" / "MLPClassifier_YFP.joblib"),
+              "YFP_RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_YFP_RMplex.joblib")}
 except FileNotFoundError:
     MODELS = {}
 

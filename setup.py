@@ -39,8 +39,14 @@ setup(
         ],
     },
     license='MIT',
-    author='bramv',
+    author='Bram van Wersch and Diego Montiel Gonzalez',
     author_email='b.vanwersch@erasmusmc.nl',
     description='tools for getting information from pedigress',
-    install_requires=get_requirements()
+    install_requires=get_requirements(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )

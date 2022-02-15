@@ -33,7 +33,7 @@ from MalePedigreeToolbox import mutation_diff
 
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
+    application_path = Path(sys._MEIPASS)  # noqa needed in order for pyinstaller to find packaged files
 elif __file__:
     application_path = os.path.dirname(__file__)
 else:
