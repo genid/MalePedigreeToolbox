@@ -11,7 +11,7 @@ class Test(TestCase):
         create_temp_out()
 
     def tearDown(self) -> None:
-        pass#clean_temp_out()
+        clean_temp_out()
 
     def test_distance_command(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
@@ -61,11 +61,11 @@ class Test(TestCase):
         command = f'mpt -f -ll silent draw_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -t both -o "{TEMP_OUT_DIR}" -rs 1 '
         run_command(command)
-        self.assertTrue(confirm_files_exist(TEMP_OUT_DIR / "draulans" / "draulans_dendogram_clusters.txt",
-                                            TEMP_OUT_DIR / "draulans" / "draulans_multi_dimensional_plot_clusters.txt",
-                                            TEMP_OUT_DIR / "draulans" / "draulans_predicted_dendogram.png",
-                                            TEMP_OUT_DIR / "draulans" / "draulans_predicted_multi_dimensional_plot.png"))
-        self.assertTrue(confirm_lines_equal(TEMP_OUT_DIR / "draulans" / "draulans_dendogram_clusters.txt",
+        self.assertTrue(confirm_files_exist(TEMP_OUT_DIR / "Draulans" / "Draulans_dendogram_clusters.txt",
+                                            TEMP_OUT_DIR / "Draulans" / "Draulans_multi_dimensional_plot_clusters.txt",
+                                            TEMP_OUT_DIR / "Draulans" / "Draulans_predicted_dendogram.png",
+                                            TEMP_OUT_DIR / "Draulans" / "Draulans_predicted_multi_dimensional_plot.png"))
+        self.assertTrue(confirm_lines_equal(TEMP_OUT_DIR / "Draulans" / "Draulans_dendogram_clusters.txt",
                                             TEST_FILE_DIR / "expected_dendrogram_clusters.txt"))
 
     def test_all(self):
@@ -98,3 +98,6 @@ class Test(TestCase):
                                                     out_folder / f"{name}_multi_dimensional_plot_clusters.txt",
                                                     out_folder / f"{name}_predicted_dendogram.png",
                                                     out_folder / f"{name}_predicted_multi_dimensional_plot.png"))
+
+
+

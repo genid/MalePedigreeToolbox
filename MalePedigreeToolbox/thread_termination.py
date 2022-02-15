@@ -81,6 +81,9 @@ class ThreadTerminable:
 
     def __del__(self):
         # remove the file on application exit
-        if _SEMAPHORE_FILE.exists():
-            _TEMP_FILE.close()
-            os.unlink(_TEMP_FILE.name)
+        try:
+            if _SEMAPHORE_FILE.exists():
+                _TEMP_FILE.close()
+                os.unlink(_TEMP_FILE.name)
+        except FileNotFoundError:
+            pass

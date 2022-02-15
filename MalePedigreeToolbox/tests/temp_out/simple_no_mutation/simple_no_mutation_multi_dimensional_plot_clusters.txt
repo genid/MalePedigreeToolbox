@@ -1,6 +1,0 @@
-Cluser 1:
-a
-
-Cluser 2:
-b
-

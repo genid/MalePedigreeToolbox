@@ -1,6 +1,7 @@
-*/__pycache__
+__pycache__/
 /male_pedigree_toolbox.egg-info/
-*/semaphore
+/semaphore
 dist
 build
 male_pedigree_toolbox.egg-info
+temp_out/

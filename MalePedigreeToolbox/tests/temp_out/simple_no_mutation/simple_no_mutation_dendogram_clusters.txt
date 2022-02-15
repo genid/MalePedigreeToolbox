@@ -1,3 +1,0 @@
-cluster 1:
-a
-b
