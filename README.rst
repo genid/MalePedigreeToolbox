@@ -19,7 +19,7 @@ Contents
 * Installing
 
   * `Executables <#download-executable>`_
-  * `Python pacakge installation <#clone-and-pip-install>`_
+  * `Python package installation <#clone-and-pip-install>`_
   * `Execute from main script <#execute-from-main>`_
 
 * Running
@@ -72,7 +72,7 @@ command line interface of the toolbox is properly installed:
 .. code-block::
 
    $ mpt --version
-   MalePedigreeToolbox v0.1.0-beta
+   MalePedigreeToolbox 0.1.10
 
 You can check the same for the GUI. This command should start up a GUI.
 
@@ -101,22 +101,22 @@ Or navigate into the `gui <./MalePedigreeToolbox/gui>`_ folder and execute the m
 Keep in mind that the following python packages are required as well as python 3.6:
 
 
-* pandas>=1.2.4
-* numpy>=1.20.3
-* statsmodels>=0.13.1
-* scipy>=1.7.1
-* matplotlib==3.4.2
-* joblib>=1.0.1
-* sklearn>=0.0
-* scikit-learn>=1.0.1
-* tqdm>=4.62.3
-* openpyxl>=3.0.9
-* graphviz>=0.18.2
+* pandas
+* numpy
+* statsmodels
+* scipy
+* matplotlib
+* joblib
+* sklearn
+* scikit-learn
+* tqdm
+* openpyxl
+* graphviz
 
 This package is required for the gui:
 
 
-* PySimpleGUI~=4.55.1
+* PySimpleGUI
 
 All of these packages can be installed with pip:
 
