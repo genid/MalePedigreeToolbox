@@ -327,7 +327,7 @@ def draw_dendrogram(
 
     # write the dendogram clusters
     leave_order = dendogram_dct["ivl"]
-    leave_colors = dendogram_dct["leaves_color_list"]
+    leave_colors = get_cluster_colors(dendogram_dct)
     current_color = leave_colors[0]
     cluster_nr = 1
     all_cluster_info = []
@@ -344,6 +344,18 @@ def draw_dendrogram(
     all_cluster_info.append(cluster_info)
     with open(outdir / f"{pedigree_name}_dendogram_clusters.txt", "w") as f:
         f.write(''.join(all_cluster_info))
+
+
+def get_cluster_colors(dendrogram_dct):
+    # solution that works for python 3.6 from
+    # https://stackoverflow.com/questions/61959602/retrieve-leave-colors-from-scipy-dendrogram/61964297#61964297
+    points = dendrogram_dct['leaves']
+    colors = ['none'] * len(points)
+    for xs, c in zip(dendrogram_dct['icoord'], dendrogram_dct['color_list']):
+        for xi in xs:
+            if xi % 10 == 5:
+                colors[(int(xi) - 5) // 10] = c
+    return colors
 
 
 @thread_termination.ThreadTerminable
