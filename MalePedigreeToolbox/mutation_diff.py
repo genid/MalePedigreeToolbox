@@ -9,7 +9,6 @@ Module for drawing dendograms based on mutation differentiation.
 Author: Diego
 Changed by: Bram
 """
-
 import pandas as pd
 import numpy as np
 import logging
@@ -300,7 +299,7 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
     # pre-sort pedigree information
     LOG.debug("Pre-sorting alleles information")
     grouped_alleles_dict = {}
-    longest_allele_per_marker = {}
+    longest_allele_per_pedigree_marker = {}
     for dictionary in alleles_list_dict:
         try:
             pedigree_name = dictionary.pop("Pedigree")
@@ -312,10 +311,13 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
             raise utility.MalePedigreeToolboxError("Incorrect alleles file. The following three column names are "
                                                    "required: 'Pedigree', 'Sample', 'Marker'.")
         allele = [x for x in dictionary.values() if not math.isnan(x)]
-        if marker not in longest_allele_per_marker:
-            longest_allele_per_marker[marker] = len(allele)
+        if pedigree_name not in longest_allele_per_pedigree_marker:
+            longest_allele_per_pedigree_marker[pedigree_name] = {}
+        if marker not in longest_allele_per_pedigree_marker[pedigree_name]:
+            longest_allele_per_pedigree_marker[pedigree_name][marker] = len(allele)
         else:
-            longest_allele_per_marker[marker] = max(longest_allele_per_marker[marker], len(allele))
+            longest_allele_per_pedigree_marker[pedigree_name][marker] = \
+                max(longest_allele_per_pedigree_marker[pedigree_name][marker], len(allele))
         if pedigree_name in grouped_alleles_dict:
             if sample_name in grouped_alleles_dict[pedigree_name]:
                 grouped_alleles_dict[pedigree_name][sample_name][marker] = allele
@@ -351,7 +353,8 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
                     continue
                 marker_data1 = sample1_data[marker]
                 marker_data2 = sample2_data[marker]
-                mutations = get_mutation_diff(marker_data1, marker_data2, longest_allele_per_marker[marker])
+                mutations = get_mutation_diff(marker_data1, marker_data2,
+                                              longest_allele_per_pedigree_marker[pedigree][marker])
                 [mutations.append(0.0) for _ in range(total_alleles_specified - len(mutations))]
 
                 count_mutation += np.sum(mutations)
@@ -470,3 +473,6 @@ if __name__ == '__main__':
     l1 = [10.0]
     l2 = [0.0]
     assert func(l1, l2, 1) == [10.0]
+    l1 = [21.0]
+    l2 = [22]
+    assert func(l1, l2, 1) == [1.0]
