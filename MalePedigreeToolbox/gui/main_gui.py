@@ -21,6 +21,7 @@ from MalePedigreeToolbox.gui.gui_constants import LINE_LENGTH
 
 from MalePedigreeToolbox import thread_termination
 from MalePedigreeToolbox import main
+from MalePedigreeToolbox import __version__
 
 sg.theme("Lightgrey1")
 
@@ -36,7 +37,7 @@ else:
 def mpt_gui():
     layout = [
         [sg.Text("Male Pedigree Toolbox", font="Arial 18 bold", pad=(0, 0))],
-        [sg.Text(f"v1.0", font="Arial 10", pad=(0, 0))],
+        [sg.Text(f"Version: {__version__}", font="Arial 10", pad=(0, 0))],
         [sg.Text("Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2021", font="Arial 10",
                  pad=(0, 0))],
         [sg.Text("", font="Arial 10",
