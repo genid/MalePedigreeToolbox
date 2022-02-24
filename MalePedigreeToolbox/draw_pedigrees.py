@@ -326,7 +326,7 @@ def draw_dendrogram(
     fig.savefig(out_path)
 
     # write the dendogram clusters
-    leave_order = dendogram_dct["leaves"]
+    leave_order = dendogram_dct["ivl"]
     # old version of scipy does not have this feature
     if 'leaves_color_list' in dendogram_dct:
         leave_colors = dendogram_dct['leaves_color_list']
