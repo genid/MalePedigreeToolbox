@@ -4,8 +4,6 @@
 """
 Module for drawing dendograms based on mutation differentiation.
 
-(If time allows it, it makes sense to rewrite the this module)
-
 Author: Diego
 Changed by: Bram
 """
@@ -15,6 +13,7 @@ import logging
 import math
 from statsmodels.stats.proportion import proportion_confint
 from typing import Union
+from collections import defaultdict
 
 # own imports
 from MalePedigreeToolbox import utility
@@ -78,34 +77,96 @@ def get_mutation_diff(alleles1, alleles2, expected_size):
     if len(alleles2) == 0:
         alleles2 = [0]
 
-    # sort allele values from smallest to largest to make sure that all assumptions are met, each allele value now has
-    # an additional original index attached
-    alleles1 = sort_allele(alleles1)
-    alleles2 = sort_allele(alleles2)
+    all_alleles1, all_alleles2 = get_likely_alleles(alleles1, alleles2, expected_size)
+    all_scores = []
+    for alleles1, alleles2 in zip(all_alleles1, all_alleles2):
+        # sort allele values from smallest to largest to make sure that all assumptions are met, each allele
+        # value now has an additional original index attached
+        alleles1 = sort_allele(alleles1)
+        alleles2 = sort_allele(alleles2)
 
-    # ensure the biggest allele is always allele 1
-    if len(alleles2) > len(alleles1):
-        temp = alleles1
-        alleles1 = alleles2
-        alleles2 = temp
-        scores = get_assymetrical_difference(alleles1, alleles2)
-    elif len(alleles1) > len(alleles2):
-        scores = get_assymetrical_difference(alleles1, alleles2)
-    else:
-        scores = get_symmetrical_difference(alleles1, alleles2)
+        # ensure the biggest allele is always allele 1
+        if len(alleles2) > len(alleles1):
+            temp = alleles1
+            alleles1 = alleles2
+            alleles2 = temp
+            scores = get_assymetrical_difference(alleles1, alleles2)
+        elif len(alleles1) > len(alleles2):
+            scores = get_assymetrical_difference(alleles1, alleles2)
+        else:
+            scores = get_symmetrical_difference(alleles1, alleles2)
 
-    # revert back to original order
-    scores.sort(key=lambda x: x[0])
-    # remove all the index values
-    scores = [score[1] for score in scores]
-    if len(alleles1) < expected_size:
-        # make sure that when both alleles are shorter than the real allele that the scores are still accurate
-        missing_difference = expected_size - len(alleles1)
-        min_score = min(scores)
-        for _ in range(missing_difference):
-            scores.append(min_score)
-    SCORE_CACHE[cache_key] = scores
-    return scores
+        # revert back to original order
+        scores.sort(key=lambda x: x[0])
+        # remove all the index values
+        scores = [score[1] for score in scores]
+        if len(alleles1) < expected_size:
+            # make sure that when both alleles are shorter than the real allele that the scores are still accurate
+            missing_difference = expected_size - len(alleles1)
+            min_score = min(scores)
+            for _ in range(missing_difference):
+                scores.append(min_score)
+        all_scores.append(scores)
+    best_scores = min(all_scores, key=sum)  # noqa
+    SCORE_CACHE[cache_key] = best_scores
+    return best_scores
+
+
+def get_likely_alleles(alleles1, alleles2, expected_size):
+    # no adjustment needed
+    if len(alleles1) == len(alleles2) == expected_size:
+        if get_most_imbalanced_decimal(alleles1, alleles2) is not None:
+            best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
+            best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
+            also_try1 = alleles1.copy()
+            also_try1.append(best_allele1_addition_value)
+            also_try2 = alleles2.copy()
+            also_try2.append(best_allele2_addition_value)
+            return [alleles1, also_try1], [alleles2, also_try2]
+    # duplicate values to expected size
+    elif len(alleles1) < expected_size and len(alleles2) < expected_size:
+        best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
+        best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
+        alleles1.extend([best_allele1_addition_value] * (expected_size - len(alleles1)))
+        alleles2.extend([best_allele2_addition_value] * (expected_size - len(alleles2)))
+    return [alleles1], [alleles2]
+
+
+def get_best_duplicating_value(alleles1, alleles2):
+    favored_decimal = get_most_imbalanced_decimal(alleles1, alleles2)
+    if favored_decimal is None:
+        favored_decimal = 0  # doesnt matter just choose one
+    best_diff_matched = [-1, 1_000_000]  # value best match, differnce. Base values are not possible
+    best_diff_unmatched = [-1, 1_000_000]  # value best match, differnce. Base values are not possible
+    for value1 in alleles1:
+        for value2 in alleles2:
+            if get_decimal(value1) == get_decimal(value2) == favored_decimal:
+                diff = get_score(value1, value2)
+                if diff < best_diff_matched[1]:
+                    best_diff_matched = [value1, diff]
+            else:
+                diff = get_score(value1, value2)
+                if diff < best_diff_unmatched[1]:
+                    best_diff_unmatched = [value1, diff]
+    if best_diff_matched[0] != -1:
+        return best_diff_matched[0]
+    return best_diff_unmatched[0]
+
+
+def get_most_imbalanced_decimal(alleles1, alleles2):
+    decimal_counts = defaultdict(int)
+    for value in alleles1:
+        decimal_counts[get_decimal(value)] -= 1
+    for value in alleles2:
+        decimal_counts[get_decimal(value)] += 1
+    favored_decimal = [-1, -1]
+    for decimal, relative_diff in decimal_counts.items():
+        if relative_diff > favored_decimal[1]:
+            favored_decimal = [decimal, relative_diff]
+    if favored_decimal[1] == 0:
+        return None
+    favored_decimal = favored_decimal[0]
+    return favored_decimal
 
 
 @thread_termination.ThreadTerminable
@@ -417,64 +478,70 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
 if __name__ == '__main__':
     # all these should be true
 
-    func = get_mutation_diff
-    l1 = [1.0, 0.0, 0.0, 0.0, 0.0]
-    l2 = [4.0, 0.0, 0.0, 0.0, 0.0]
-    assert func(l1, l2, 1) == [3.0]
-    l1 = [12, 13, 18]
-    l2 = [12, 18]
-    assert func(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l1 = [12, 13, 14]
-    l2 = [12]
-    assert func(l1, l2, 3) == [0.0, 1.0, 2.0]
-    l1 = [12, 13, 14]
-    l2 = [12, 14, 18]
-    assert func(l1, l2, 3) == [0.0, 1.0, 4.0]
-    l1 = [12, 13, 18, 19]
-    l2 = [12, 18]
-    assert func(l1, l2, 3) == [0.0, 1.0, 0.0, 1.0]
-    l1 = [12, 13, 16]
-    l2 = [13, 12, 16]
-    assert func(l1, l2, 3) == [0.0, 0.0, 0.0]
-    l1 = [13, 12.1, 16]
-    l2 = [12.1, 13, 16]
-    assert func(l1, l2, 3) == [0.0, 0.0, 0.0]
-    l1 = [12.1, 13.1, 16]
-    l2 = [13, 12.1, 16]
-    assert func(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l1 = [12.1, 14, 16]
-    l2 = [13, 12.1, 16]
-    assert func(l1, l2, 3) == [0.0, 1.0, 0.0]
     l0 = [12, 13]
     l1 = [12]
     l2 = [13]
-    assert func(l1, l2, 2) == [1.0, 1.0]
+    assert get_mutation_diff(l1, l2, 2) == [1.0, 1.0]
+    l1 = [55, 63.1, 67.1]
+    l2 = [54, 55, 63.1]
+    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 4.0, 1.0]
+    l1 = [55, 63.1, 67.1]
+    l2 = [54, 55, 63.1]
+    # in this case it makes more sense if there are 2 duplicated alleles
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 4.0, 1.0]
+    l1 = [1.0, 0.0, 0.0, 0.0, 0.0]
+    l2 = [4.0, 0.0, 0.0, 0.0, 0.0]
+    assert get_mutation_diff(l1, l2, 1) == [3.0]
+    l1 = [12, 13, 18]
+    l2 = [12, 18]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
+    l1 = [12, 13, 14]
+    l2 = [12]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 2.0]
+    l1 = [12, 13, 14]
+    l2 = [12, 14, 18]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 4.0]
+    l1 = [12, 13, 18, 19]
+    l2 = [12, 18]
+    assert get_mutation_diff(l1, l2, 4) == [0.0, 1.0, 0.0, 1.0]
+    l1 = [12, 13, 16]
+    l2 = [13, 12, 16]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 0.0]
+    l1 = [13, 12.1, 16]
+    l2 = [12.1, 13, 16]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 0.0]
+    l1 = [12.1, 13.1, 16]
+    l2 = [13, 12.1, 16]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
+    l1 = [12.1, 14, 16]
+    l2 = [13, 12.1, 16]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
     l0 = [12, 13, 15] # noqa
     l1 = [12]
     l2 = [13]
-    assert func(l1, l2, 3) == [1.0, 1.0, 1.0]
+    assert get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0]
     l0 = [12, 13, 15]  # noqa
     l1 = [12, 15]
     l2 = [13, 15]
-    assert func(l1, l2, 3) == [1.0, 0.0, 0.0]
+    assert get_mutation_diff(l1, l2, 3) == [1.0, 0.0, 0.0]
     l1 = [12.1, 13.0]
     l2 = [12.0, 13.1]
-    assert func(l1, l2, 2) == [1.0, 1.0]
+    assert get_mutation_diff(l1, l2, 2) == [1.0, 1.0]
     l1 = [13]
     l2 = [12.1, 13]
-    assert func(l1, l2, 2) == [1.0, 0.0]
+    assert get_mutation_diff(l1, l2, 2) == [1.0, 0.0]
     l1 = [12.1, 11]
     l2 = [11.1, 12.1, 11, 12]
-    assert func(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
+    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
     l1 = [16.2, 19.2, 0.0, 0.0]
     l2 = [16.2, 18.2, 19.2, 0.0]
-    assert func(l1, l2, 3) == [0.0, 1.0, 0.0]
+    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
     l1 = [0.0]
     l2 = [0.0]
-    assert func(l1, l2, 1) == [0.0]
+    assert get_mutation_diff(l1, l2, 1) == [0.0]
     l1 = [10.0]
     l2 = [0.0]
-    assert func(l1, l2, 1) == [10.0]
+    assert get_mutation_diff(l1, l2, 1) == [10.0]
     l1 = [21.0]
     l2 = [22]
-    assert func(l1, l2, 1) == [1.0]
+    assert get_mutation_diff(l1, l2, 1) == [1.0]
