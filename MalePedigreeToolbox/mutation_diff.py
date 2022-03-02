@@ -196,7 +196,8 @@ def write_differentiation_rates(mutation_dict_list, distance_dict, outfile):
         if pedigree not in distance_dict:
             if pedigree not in warned_pedigrees:
                 LOG.warning(f"Can not include pedigree {pedigree} in differentiation rate calculation since they are"
-                            f" not present in the distance file.")
+                            f" not present in the distance file. This is likely caused by different names in the TGF"
+                            f" files and alleles file.")
             warned_pedigrees.add(pedigree)
             continue
 
@@ -206,7 +207,8 @@ def write_differentiation_rates(mutation_dict_list, distance_dict, outfile):
             distance = distance_dict[pedigree][reverse_pair]
         else:
             LOG.warning(f"Can not include pair {dictionary['To']}-{dictionary['From']} in the differentiation rate "
-                        f"calculation since they are not present in the distance file.")
+                        f"calculation since they are not present in the distance file.  This is likely caused by "
+                        f"different names in the TGF files and alleles file.")
             continue
         if distance in meiosis_dict:
             if pair not in covered_pairs:

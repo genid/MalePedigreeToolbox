@@ -27,7 +27,7 @@ mut_diff_frame = Frame(
          sg.FileBrowse(key="distance_md")],
         [sg.Text(
             "Distance file location. Can be generated in the distance tab. This file is optional, it will provide a way"
-            " of seeing average mutations per generation plus confidence intervals.",
+            " of seeing average mutations rate plus confidence intervals.",
             size=(LINE_LENGTH, 2)
         )],
         [TextLabel("Include predict file"),
