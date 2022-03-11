@@ -50,8 +50,8 @@ The easiest way of using the Male pedigree toolbox is by using the precompiled e
 linux and windows. Unfortunately there is no executable for mac available. The downside of these executables is that it
 takes a long time for them to start up (around 20 seconds). There is a gui and command line executable available.
 
-In order for certain functionality of the command line tool Graphviz https://graphviz.org/ is required. This is included
-in the executable.
+In order for inferring pedigree mutations to work properly https://graphviz.org/ is required. You will need to add Graphiz
+to your system path or add the Graphiz directory inside of the MalePedigreeToolbox folder. Graphiz is included in the executables.
 
 Clone and pip install
 ^^^^^^^^^^^^^^^^^^^^^
