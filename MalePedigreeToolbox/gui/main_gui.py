@@ -162,6 +162,8 @@ def get_command(values):
         arguments += ["mut_diff", "-af", values["allele_md"], "-o", values["output_md"]]
         if values["predict_file_md"] is True:
             arguments.append("-pf")
+        if values["distance_md"] != '':
+            arguments.extend(["-df", values["distance_md"]])
         output_dir = values["output_md"]
 
     elif values["mpt_tabs"] == "Pedigree mutation graph":
