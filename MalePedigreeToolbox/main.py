@@ -243,7 +243,7 @@ def add_pairwise_distance_subparser(subparsers):
     pairwise_dist_parser = subparsers.add_parser("distances",
                                                  help="Calultate the pairwise distance for all .tgf files in a folder")
     pairwise_dist_parser.add_argument("-t", "--tgf_folder",  required=True,
-                                      help="Folder name containing at least 2 .tgf files.", metavar="PATH",
+                                      help="Folder name containing at least 1 .tgf file.", metavar="PATH",
                                       type=utility.check_tgf_folder)
     pairwise_dist_parser.add_argument("-o", "--outdir", help="Output folder name",
                                       required=True, metavar="PATH",
@@ -277,7 +277,7 @@ def add_infer_pedigree_mutations_parser(subparsers):
     pedigree_parser.add_argument("-af", "--allele_file", help="File containing allele frequencies in CSV format",
                                  required=True, metavar="FILE", type=utility.check_in_file)
     pedigree_parser.add_argument("-t", "--tgf_folder",  required=True,
-                                 help="Folder name containing at least 2 .tgf files.", metavar="PATH",
+                                 help="Folder name containing at least 1 .tgf file.", metavar="PATH",
                                  type=utility.check_tgf_folder)
     pedigree_parser.add_argument("-mm", "--minimum_mutations",
                                  help="Minimum mutations that need to be present in order for the pedigree to be drawn"
@@ -332,7 +332,7 @@ def add_all_parser(subparsers):
                                                    "mutation differentiation rates and finaly caclulates mutation "
                                                    "rates from pedigrees.")
     all_parser.add_argument("-t", "--tgf_folder",  required=True,
-                            help="Folder name containing at least 2 .tgf files.", metavar="PATH",
+                            help="Folder name containing at least 1 .tgf file.", metavar="PATH",
                             type=utility.check_tgf_folder)
     all_parser.add_argument("-af", "--allele_file", help="File containing allele frequencies in CSV format",
                             required=True, metavar="FILE", type=utility.check_in_file)

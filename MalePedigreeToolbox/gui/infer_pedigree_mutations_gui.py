@@ -25,7 +25,7 @@ ped_mut_graph_frame = Frame(
          sg.InputText(size=(HALFWAY_START_NR, 1), key="tgf_folder_pmg"),
          sg.FolderBrowse(key="tgf_folder_pmg")],
         [sg.Text(
-            "Folder containing at least 2 .tgf files",
+            "Folder containing at least 1 .tgf file",
             size=(LINE_LENGTH, 1)
         )],
         [TextLabel("Minimum mut. (optional)"),

@@ -2,9 +2,6 @@ import os
 import shutil
 from pathlib import Path
 from collections import defaultdict
-import sys
-from typing import Tuple, Callable, Any
-import io
 
 from MalePedigreeToolbox import main
 
@@ -127,30 +124,3 @@ def _get_requested_columns(line, separator, ignore_columns):
             continue
         wanted_values.append(value)
     return f'{separator}'.join(wanted_values)
-
-
-def capture_print(function: Callable, *args: Any) -> Tuple[str, Any]:
-    # this seems to not be working on some machines --> no clue
-    captured_output = io.StringIO()  # Create StringIO object
-    before_redirect_stdout = sys.stdout
-    sys.stdout = captured_output  # and redirect stdout.
-    function_out = function(*args)  # this funtions prints get captured
-    sys.stdout = before_redirect_stdout  # Reset redirect.
-    captured_output_str = captured_output.getvalue()
-    return captured_output_str, function_out
-
-
-def assert_equal_warning_message(expected_messages, warning_messages):
-    try:
-        warning_lines = warning_messages.split("\n")
-        if len(expected_messages) != len(warning_lines):
-            return False
-        for index, line in enumerate(warning_lines):
-            if len(line) == 0:
-                continue
-            message = line.split(" - ", 1)[1]
-            if expected_messages[index] != message:
-                return False
-        return True
-    except IndexError:
-        return False

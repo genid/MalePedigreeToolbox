@@ -22,14 +22,14 @@ def check_tgf_folder(
     """Check if a given folder exists"""
     folder_path = _verify_str_path(folder_path)
     path = Path(folder_path)
-    if not path.is_dir():
-        raise MalePedigreeToolboxError("Provided output directory is a file, please provide a directory.")
     if not path.exists():
         raise MalePedigreeToolboxError(f"Provided tgf folder ({path}) does not exist.")
+    if not path.is_dir():
+        raise MalePedigreeToolboxError("Provided output directory is a file, please provide a directory.")
     all_tgf_files = list(path.glob("*.tgf"))
-    if len(all_tgf_files) < 2:
-        raise MalePedigreeToolboxError(f"At least 2 tgf files should be present in {path}. "
-                                       f"Only found {len(all_tgf_files)}")
+    if len(all_tgf_files) < 1:
+        raise MalePedigreeToolboxError(f"At least 1 tgf files should be present in {path}. "
+                                       f"But no tgf files where found.")
     return path
 
 

@@ -82,18 +82,17 @@ def read_graph(
             if len(values) != 2:
                 # empty line ignore and continue
                 if len(values) != 1:
-                    LOG.warning(f"File {file.resolve()} contains an edge between {len(values)} nodes. "
+                    LOG.warning(f"File {file.name} contains an edge between {len(values)} nodes. "
                                 f"An edge should be between 2 nodes only.")
                 continue
 
             id1, id2 = values
             # in case an edge is referencing a non existing node ignore it
             if id1 not in graph or id2 not in graph:
-                LOG.warning(f"File {file.resolve()} contains an edge with an unknown node.")
+                LOG.warning(f"File {file.name} contains an edge with an unknown node.")
                 continue
             graph[id1].add(id2)
             graph[id2].add(id1)
-
     return graph, id_name_link
 
 
@@ -105,24 +104,28 @@ def get_distances(
 
     :param graph:  a dictionary keyed on nodes with connected nodes as values
     :param nodes_of_interest: a set linking node ID's to sample names if applicable for a certain ID
-    :return: a list of connecting nodes and respective distance between them
+    :return: a list of connecting named nodes and respective distance between them
     """
     distances = []
     covered_pairs = set()
     for id_ in nodes_of_interest:
         covered_connected = {id_}
         connected = {(i, 1) for i in graph[id_]}
+
         while len(connected) > 0:
             connected_id, distance = connected.pop()
             if connected_id in nodes_of_interest:
                 if (connected_id, id_) not in covered_pairs:
                     distances.append((nodes_of_interest[id_], nodes_of_interest[connected_id], distance))
-                    # invalid pedigree
-                    if (id_, connected_id) in covered_pairs:
-                        LOG.warning("Pedigree is invalid. It likely contains contains circular relations. Or is "
-                                    "missing any named nodes. Aborting calculating distances for file {file}.")
-                        return None
                     covered_pairs.add((id_, connected_id))
             covered_connected.add(connected_id)
-            connected.update([(i, distance + 1) for i in graph[connected_id] if i not in covered_connected])
+
+            covered_node_ids = {v[0] for v in connected}
+            for node_id in graph[connected_id]:
+                if node_id in covered_node_ids:
+                    LOG.warning("Encountered a circular relation. Aborting distance calculation.")
+                    return None
+                if node_id not in covered_connected:
+                    connected.add((node_id, distance + 1))
+                    covered_node_ids.add(node_id)
     return distances
