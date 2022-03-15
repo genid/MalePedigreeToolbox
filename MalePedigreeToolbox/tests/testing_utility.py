@@ -12,9 +12,27 @@ CURRENT_DIR = Path(__file__).resolve().parent
 TEST_FILE_DIR = CURRENT_DIR / 'test_files'
 TEMP_OUT_DIR = CURRENT_DIR / 'temp_out'
 
+try:
+    os.mkdir(TEMP_OUT_DIR)
+except IOError:
+    pass
+
 
 def clean_temp_out():
-    shutil.rmtree(TEMP_OUT_DIR)
+    for file in Path(TEMP_OUT_DIR / 'test_outdir').rglob("*"):
+        if file.suffix == ".log" or file.is_dir():
+            continue
+        else:
+            os.remove(file)
+
+
+def clean_log_files():
+    # make sure all files are closed and we can safely delete
+    handlers = main.LOG.handlers[:]
+    for handler in handlers:
+        handler.close()
+        main.LOG.removeHandler(handler)
+    shutil.rmtree(TEMP_OUT_DIR / 'test_outdir')
 
 
 def create_temp_out():
