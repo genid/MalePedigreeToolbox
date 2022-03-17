@@ -125,10 +125,17 @@ def get_likely_alleles(alleles1, alleles2, expected_size):
             return [alleles1, also_try1], [alleles2, also_try2]
     # duplicate values to expected size
     elif len(alleles1) < expected_size and len(alleles2) < expected_size:
-        best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
-        best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
-        alleles1.extend([best_allele1_addition_value] * (expected_size - len(alleles1)))
-        alleles2.extend([best_allele2_addition_value] * (expected_size - len(alleles2)))
+        # first make sizes the same in stepwise maner
+        if len(alleles2) < len(alleles1):
+            for _ in range(len(alleles1) - len(alleles2)):
+                best_allele2_addition_value = get_best_duplicating_value(alleles1, alleles2)
+                alleles2.append(best_allele2_addition_value)
+        # now make sizes expected size in stepwise manner
+        for _ in range(expected_size - len(alleles1)):
+            best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
+            best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
+            alleles1.append(best_allele1_addition_value)
+            alleles2.append(best_allele2_addition_value)
     return [alleles1], [alleles2]
 
 
@@ -478,6 +485,12 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
 if __name__ == '__main__':
     # all these should be true
 
+    l2 = [48, 66.1]
+    l1 = [48, 66.1, 67.1]
+    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 1.0, 0.0]
+    l2 = [48, 66.1]
+    l1 = [48, 66.1, 67.1]
+    assert get_mutation_diff(l1, l2, 5) == [0.0, 0.0, 1.0, 0.0, 0.0]
     l0 = [12, 13]
     l1 = [12]
     l2 = [13]
@@ -545,3 +558,12 @@ if __name__ == '__main__':
     l1 = [21.0]
     l2 = [22]
     assert get_mutation_diff(l1, l2, 1) == [1.0]
+    l1 = [47, 48, 66.1, 67.1]
+    l2 = [48, 66.1]
+    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
+    l1 = [48, 66.1]
+    l2 = [47, 48, 66.1, 67.1]
+    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
+    l2 = [48, 66.1]
+    l1 = [48, 66.1]
+    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 0.0, 0.0]
