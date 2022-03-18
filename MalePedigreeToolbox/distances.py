@@ -37,15 +37,7 @@ def main(name_space: "argparse.Namespace"):
             continue
         else:
             all_distances.append((distances, file.name))
-
-    distance_text = "File,From,To,Distance\n"
-    for distances, file in all_distances:
-        for distance in distances:
-            distance_text += f"{file.replace('.tgf', '')},{distance[0]},{distance[1]},{distance[2]}\n"
-
-    with open(outdir / DISTANCE_FILE_NAME, "w") as f:
-        f.write(distance_text[:-1])  # remove the last newline
-    LOG.info("Finished calculating pairwise distances")
+    write_results(all_distances, outdir)
 
 
 @thread_termination.ThreadTerminable
@@ -96,11 +88,12 @@ def read_graph(
     return graph, id_name_link
 
 
+@thread_termination.ThreadTerminable
 def get_distances(
     graph: Dict[str, Set[str]],
     nodes_of_interest: Dict[str, str]
 ) -> Union[List[Tuple[str, str, int]], None]:
-    """Get the distance between all nodes of interest.
+    """Get the distance between all named nodes in the graph.
 
     :param graph:  a dictionary keyed on nodes with connected nodes as values
     :param nodes_of_interest: a set linking node ID's to sample names if applicable for a certain ID
@@ -129,3 +122,14 @@ def get_distances(
                     connected.add((node_id, distance + 1))
                     covered_node_ids.add(node_id)
     return distances
+
+
+def write_results(all_distances, outdir):
+    distance_text = "File,From,To,Distance\n"
+    for distances, file in all_distances:
+        for distance in distances:
+            distance_text += f"{file.replace('.tgf', '')},{distance[0]},{distance[1]},{distance[2]}\n"
+
+    with open(outdir / DISTANCE_FILE_NAME, "w") as f:
+        f.write(distance_text[:-1])  # remove the last newline
+    LOG.info("Finished calculating pairwise distances")
