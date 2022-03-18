@@ -1,5 +1,3 @@
-"""Testing of commands with inputs as a sanity check for command functionality"""
-
 import io
 from unittest import TestCase
 import logging

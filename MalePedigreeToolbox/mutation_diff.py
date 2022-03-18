@@ -12,28 +12,36 @@ import numpy as np
 import logging
 import math
 from statsmodels.stats.proportion import proportion_confint
-from typing import Union
+from typing import Union, Tuple, List, Dict, FrozenSet, Any, TYPE_CHECKING
 from collections import defaultdict
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # own imports
 from MalePedigreeToolbox import utility
 from MalePedigreeToolbox import thread_termination
 
-LOG = logging.getLogger("mpt")
+LOG: logging.Logger = logging.getLogger("mpt")
 
-SUMMARY_OUT = "summary_out.csv"
-FULL_OUT = "full_out.csv"
-DIFFERENTIATION_OUT = "differentiation_out.csv"
-PREDICT_OUT = "predict_out.csv"
+SUMMARY_OUT: str = "summary_out.csv"
+FULL_OUT: str = "full_out.csv"
+DIFFERENTIATION_OUT: str = "differentiation_out.csv"
+PREDICT_OUT: str = "predict_out.csv"
 
-SCORE_CACHE = {}  # used to store already computed scores to potentially speed up calculations
+SCORE_CACHE: Dict[FrozenSet, List[int]] = {}  # used to store already computed scores, speed up
 
 
-def get_score(value1, value2):
+def get_score(
+    value1: float,
+    value2: float
+) -> float:
     return math.ceil(abs(value1 - value2))
 
 
-def get_decimal(number: Union[int, float]) -> int:
+def get_decimal(
+    number: Union[int, float]
+) -> int:
     # make sure that the full number is returned and no strange float rounding occurs
     nr_frac = str(number).split(".")
     if len(nr_frac) == 1:
@@ -41,7 +49,10 @@ def get_decimal(number: Union[int, float]) -> int:
     return int(nr_frac[1])
 
 
-def get_matrix_scores(a, b):
+def get_matrix_scores(
+    a: List[Tuple[int, float]],
+    b: List[Tuple[int, float]]
+) -> Tuple[np.ndarray, np.ndarray]:
     matrix_scores = np.ndarray((len(a), len(b)))
     match_decimal_matrix = np.ndarray((len(a), len(b)))
 
@@ -52,15 +63,25 @@ def get_matrix_scores(a, b):
     return matrix_scores, match_decimal_matrix
 
 
-def sort_allele(allele):
+def sort_allele(
+    allele: List[float]
+) -> List[Tuple[int, float]]:
+    """Sort an allele from small to large values and ensure add the original index"""
     allele = [(index, value) for index, value in enumerate(allele)]
     allele.sort(key=lambda x: (x[1], x[0]))
     return allele
 
 
 @thread_termination.ThreadTerminable
-def get_mutation_diff(alleles1, alleles2, expected_size):
+def get_mutation_diff(
+    alleles1: List[float],
+    alleles2: List[float],
+    expected_size: int
+) -> List[float]:
     """Get the difference between 2 rows of numbers. Matching decimals is first priority then smallest difference.
+
+    expected_size refers to the longest size of an allele encountered for a certain marker. It is possible that the
+    allele is actually longer because of duplications
 
     Decimals have priority because we assume that a mutation from 1.1 to 3.1 is more likely than 1.1 to 2.0 even though
     the score is lower"""
@@ -77,8 +98,11 @@ def get_mutation_diff(alleles1, alleles2, expected_size):
     if len(alleles2) == 0:
         alleles2 = [0]
 
+    # try and reconstruct alleles based on expected size, this means figureing out where the duplications are.
+    # if only one allele is imbalanced we fix the issue later.
     all_alleles1, all_alleles2 = get_likely_alleles(alleles1, alleles2, expected_size)
     all_scores = []
+    # sometimes we test multiple possible alleles to see the best possible score
     for alleles1, alleles2 in zip(all_alleles1, all_alleles2):
         # sort allele values from smallest to largest to make sure that all assumptions are met, each allele
         # value now has an additional original index attached
@@ -100,21 +124,20 @@ def get_mutation_diff(alleles1, alleles2, expected_size):
         scores.sort(key=lambda x: x[0])
         # remove all the index values
         scores = [score[1] for score in scores]
-        if len(alleles1) < expected_size:
-            # make sure that when both alleles are shorter than the real allele that the scores are still accurate
-            missing_difference = expected_size - len(alleles1)
-            min_score = min(scores)
-            for _ in range(missing_difference):
-                scores.append(min_score)
         all_scores.append(scores)
     best_scores = min(all_scores, key=sum)  # noqa
     SCORE_CACHE[cache_key] = best_scores
     return best_scores
 
 
-def get_likely_alleles(alleles1, alleles2, expected_size):
-    # no adjustment needed
+def get_likely_alleles(
+    alleles1: List[float],
+    alleles2: List[float],
+    expected_size: int
+) -> Tuple[List[List[float]], List[List[float]]]:
+    # no duplicates needed
     if len(alleles1) == len(alleles2) == expected_size:
+        # but there might be 2 values duplicated if the decimals are unbalanced
         if get_most_imbalanced_decimal(alleles1, alleles2) is not None:
             best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
             best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
@@ -123,7 +146,7 @@ def get_likely_alleles(alleles1, alleles2, expected_size):
             also_try2 = alleles2.copy()
             also_try2.append(best_allele2_addition_value)
             return [alleles1, also_try1], [alleles2, also_try2]
-    # duplicate values to expected size
+    # duplicate values to expected size, do this in a stepwse manner for bigger differences
     elif len(alleles1) < expected_size and len(alleles2) < expected_size:
         # first make sizes the same in stepwise maner
         if len(alleles2) < len(alleles1):
@@ -139,7 +162,10 @@ def get_likely_alleles(alleles1, alleles2, expected_size):
     return [alleles1], [alleles2]
 
 
-def get_best_duplicating_value(alleles1, alleles2):
+def get_best_duplicating_value(
+    alleles1: List[float],
+    alleles2: List[float]
+) -> float:
     favored_decimal = get_most_imbalanced_decimal(alleles1, alleles2)
     if favored_decimal is None:
         favored_decimal = 0  # doesnt matter just choose one
@@ -160,7 +186,11 @@ def get_best_duplicating_value(alleles1, alleles2):
     return best_diff_unmatched[0]
 
 
-def get_most_imbalanced_decimal(alleles1, alleles2):
+def get_most_imbalanced_decimal(
+    alleles1: List[float],
+    alleles2: List[float]
+) -> Union[int, None]:
+    # get the decimal that is the most prevelant allele2 compared to allele1
     decimal_counts = defaultdict(int)
     for value in alleles1:
         decimal_counts[get_decimal(value)] -= 1
@@ -177,7 +207,10 @@ def get_most_imbalanced_decimal(alleles1, alleles2):
 
 
 @thread_termination.ThreadTerminable
-def get_assymetrical_difference(alleles1, alleles2):
+def get_assymetrical_difference(
+    alleles1: List[Tuple[int, float]],
+    alleles2: List[Tuple[int, float]]
+) -> List[Tuple[int, float]]:
     # in case alleles1 > alleles2
     matrix_scores, match_decimal_matrix = get_matrix_scores(alleles1, alleles2)
     final_scores = []
@@ -210,8 +243,10 @@ def get_assymetrical_difference(alleles1, alleles2):
 
 
 @thread_termination.ThreadTerminable
-def get_symmetrical_difference(alleles1, alleles2):
-
+def get_symmetrical_difference(
+    alleles1: List[Tuple[int, float]],
+    alleles2: List[Tuple[int, float]]
+) -> List[Tuple[int, float]]:
     # if the lenght of both alleles is equal
     matrix_scores, match_decimal_matrix = get_matrix_scores(alleles1, alleles2)
     final_scores = []
@@ -249,7 +284,11 @@ def get_symmetrical_difference(alleles1, alleles2):
 
 
 @thread_termination.ThreadTerminable
-def write_differentiation_rates(mutation_dict_list, distance_dict, outfile):
+def write_differentiation_rates(
+    mutation_dict_list: List[Dict[str, Any]],
+    distance_dict: Dict[str, Dict[str, int]],
+    outfile: "Path"
+):
     # the rate of differentiation given a certain distance of a 2 subjects in a pair
     meiosis_dict = {}
     covered_pairs = set()
@@ -303,16 +342,18 @@ def write_differentiation_rates(mutation_dict_list, distance_dict, outfile):
 
 
 @thread_termination.ThreadTerminable
-def sample_combinations(samples):
+def sample_combinations(
+    samples: List[str]
+) -> List[Tuple[str, str]]:
     combinations = []
     for index, sample in enumerate(samples):
         for inner_index in range(index + 1, len(samples)):
-            combinations.append([sample, samples[inner_index]])
+            combinations.append((sample, samples[inner_index]))
     return combinations
 
 
 @thread_termination.ThreadTerminable
-def read_distance_file(distance_file):
+def read_distance_file(distance_file: "Path"):
     # read the distance file into a quickly accesible dictionary
     distance_dict = {}
     with open(distance_file) as f:
@@ -366,7 +407,7 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
         raise utility.MalePedigreeToolboxError("Empty alleles file provided")
     total_alleles_specified = len(alleles_list_dict[0]) - 3
 
-    # pre-sort pedigree information
+    # pre-sort pedigree information for quick retrieval of information
     LOG.debug("Pre-sorting alleles information")
     grouped_alleles_dict = {}
     longest_allele_per_pedigree_marker = {}
@@ -404,16 +445,19 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
     predict_pedigrees_list = []
 
     prev_total = 0
+    # make comparssons within each pedigree
     for index, (pedigree, pedigree_data) in enumerate(grouped_alleles_dict.items()):
         sample_names = list(pedigree_data.keys())
         sample_combs = sample_combinations(sample_names)
         predict_samples_list = []
         LOG.info(f"Comparing {len(sample_combs)} allele combinations for pedigree {pedigree}")
+        # for each combination of samples
         for sample1, sample2 in sample_combs:
             sample1_data = pedigree_data[sample1]
             sample2_data = pedigree_data[sample2]
             total_mutations = 0
             marker_values = {name: 0 for name in markers}
+            # for each individual marker
             for marker in markers:
                 count_mutation = 0
 
@@ -432,8 +476,8 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
                 if marker in marker_values and include_predict_file:
                     marker_values[marker] = count_mutation
                 mutation_dict.append({"Marker": marker, "Pedigree": pedigree, "From": sample1, "To": sample2,
-                                      **{f"Allele_{index + 1}": mutations[index] for index in range(total_alleles_specified)},
-                                      "Total": count_mutation})
+                                      **{f"Allele_{index + 1}": mutations[index] for index in
+                                         range(total_alleles_specified)}, "Total": count_mutation})
 
             # for predicting the generational distances
             if include_predict_file:
@@ -484,86 +528,4 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
 
 if __name__ == '__main__':
     # all these should be true
-
-    l2 = [48, 66.1]
-    l1 = [48, 66.1, 67.1]
-    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 1.0, 0.0]
-    l2 = [48, 66.1]
-    l1 = [48, 66.1, 67.1]
-    assert get_mutation_diff(l1, l2, 5) == [0.0, 0.0, 1.0, 0.0, 0.0]
-    l0 = [12, 13]
-    l1 = [12]
-    l2 = [13]
-    assert get_mutation_diff(l1, l2, 2) == [1.0, 1.0]
-    l1 = [55, 63.1, 67.1]
-    l2 = [54, 55, 63.1]
-    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 4.0, 1.0]
-    l1 = [55, 63.1, 67.1]
-    l2 = [54, 55, 63.1]
-    # in this case it makes more sense if there are 2 duplicated alleles
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 4.0, 1.0]
-    l1 = [1.0, 0.0, 0.0, 0.0, 0.0]
-    l2 = [4.0, 0.0, 0.0, 0.0, 0.0]
-    assert get_mutation_diff(l1, l2, 1) == [3.0]
-    l1 = [12, 13, 18]
-    l2 = [12, 18]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l1 = [12, 13, 14]
-    l2 = [12]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 2.0]
-    l1 = [12, 13, 14]
-    l2 = [12, 14, 18]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 4.0]
-    l1 = [12, 13, 18, 19]
-    l2 = [12, 18]
-    assert get_mutation_diff(l1, l2, 4) == [0.0, 1.0, 0.0, 1.0]
-    l1 = [12, 13, 16]
-    l2 = [13, 12, 16]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 0.0]
-    l1 = [13, 12.1, 16]
-    l2 = [12.1, 13, 16]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 0.0]
-    l1 = [12.1, 13.1, 16]
-    l2 = [13, 12.1, 16]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l1 = [12.1, 14, 16]
-    l2 = [13, 12.1, 16]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l0 = [12, 13, 15] # noqa
-    l1 = [12]
-    l2 = [13]
-    assert get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0]
-    l0 = [12, 13, 15]  # noqa
-    l1 = [12, 15]
-    l2 = [13, 15]
-    assert get_mutation_diff(l1, l2, 3) == [1.0, 0.0, 0.0]
-    l1 = [12.1, 13.0]
-    l2 = [12.0, 13.1]
-    assert get_mutation_diff(l1, l2, 2) == [1.0, 1.0]
-    l1 = [13]
-    l2 = [12.1, 13]
-    assert get_mutation_diff(l1, l2, 2) == [1.0, 0.0]
-    l1 = [12.1, 11]
-    l2 = [11.1, 12.1, 11, 12]
-    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
-    l1 = [16.2, 19.2, 0.0, 0.0]
-    l2 = [16.2, 18.2, 19.2, 0.0]
-    assert get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0]
-    l1 = [0.0]
-    l2 = [0.0]
-    assert get_mutation_diff(l1, l2, 1) == [0.0]
-    l1 = [10.0]
-    l2 = [0.0]
-    assert get_mutation_diff(l1, l2, 1) == [10.0]
-    l1 = [21.0]
-    l2 = [22]
-    assert get_mutation_diff(l1, l2, 1) == [1.0]
-    l1 = [47, 48, 66.1, 67.1]
-    l2 = [48, 66.1]
-    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
-    l1 = [48, 66.1]
-    l2 = [47, 48, 66.1, 67.1]
-    assert get_mutation_diff(l1, l2, 4) == [1.0, 0.0, 0.0, 1.0]
-    l2 = [48, 66.1]
-    l1 = [48, 66.1]
-    assert get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 0.0, 0.0]
+    pass
