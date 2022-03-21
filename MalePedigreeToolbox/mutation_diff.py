@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for drawing dendograms based on mutation differentiation.
+Calculate mutation differentiation between individuals in pedigrees
 
 Author: Diego
-Changed by: Bram
+Extensive Changes by: Bram
 """
 import pandas as pd
 import numpy as np
@@ -345,6 +345,7 @@ def write_differentiation_rates(
 def sample_combinations(
     samples: List[str]
 ) -> List[Tuple[str, str]]:
+    # get unique pairs of all combinations
     combinations = []
     for index, sample in enumerate(samples):
         for inner_index in range(index + 1, len(samples)):
@@ -353,7 +354,9 @@ def sample_combinations(
 
 
 @thread_termination.ThreadTerminable
-def read_distance_file(distance_file: "Path"):
+def read_distance_file(
+    distance_file: "Path"
+) -> Dict[str, Dict[str, int]]:
     # read the distance file into a quickly accesible dictionary
     distance_dict = {}
     with open(distance_file) as f:
@@ -397,18 +400,9 @@ def main(name_space):
     run(alleles_df, distance_file, outdir, include_predict_file)
 
 
-@thread_termination.ThreadTerminable
-def run(alleles_df, distance_file, outdir, include_predict_file):
-
-    alleles_list_dict = alleles_df.to_dict('records')
-
-    if len(alleles_list_dict) == 0:
-        LOG.error("Empty alleles file provided")
-        raise utility.MalePedigreeToolboxError("Empty alleles file provided")
-    total_alleles_specified = len(alleles_list_dict[0]) - 3
-
-    # pre-sort pedigree information for quick retrieval of information
-    LOG.debug("Pre-sorting alleles information")
+def sort_pedigree_information(
+    alleles_list_dict: List[Dict[str, Any]]
+) -> Tuple[Dict[str, Dict[str, Dict[str, List[float]]]], Dict[str, Dict[str, int]]]:
     grouped_alleles_dict = {}
     longest_allele_per_pedigree_marker = {}
     for dictionary in alleles_list_dict:
@@ -436,6 +430,28 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
                 grouped_alleles_dict[pedigree_name][sample_name] = {marker: allele}
         else:
             grouped_alleles_dict[pedigree_name] = {sample_name: {marker: allele}}
+    return grouped_alleles_dict, longest_allele_per_pedigree_marker
+
+
+@thread_termination.ThreadTerminable
+def run(
+    alleles_df: pd.DataFrame,
+    distance_file: "Path",
+    outdir: "Path",
+    include_predict_file: bool
+):
+
+    alleles_list_dict = alleles_df.to_dict('records')
+
+    if len(alleles_list_dict) == 0:
+        LOG.error("Empty alleles file provided")
+        raise utility.MalePedigreeToolboxError("Empty alleles file provided")
+    total_alleles_specified = len(alleles_list_dict[0]) - 3
+
+    # pre-sort pedigree information for quick retrieval of information
+    LOG.debug("Pre-sorting alleles information")
+    grouped_alleles_dict, longest_allele_per_pedigree_marker = sort_pedigree_information(alleles_list_dict)
+
     LOG.info("Finished reading both input files")
     markers = set(alleles_df.Marker)
 
@@ -524,8 +540,3 @@ def run(alleles_df, distance_file, outdir, include_predict_file):
             f.write('\n'.join(predict_text_list))
 
     LOG.info("Finished calculating differentiation rates.")
-
-
-if __name__ == '__main__':
-    # all these should be true
-    pass

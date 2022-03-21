@@ -34,9 +34,9 @@ class Test(TestCase):
 
 
 class TestMutationDiff(TestCase):
+    # test a lot of different possible combinations of alleles and expected outcomes
 
     def test_get_mutation_diff1(self):
-        # a lot of cases that are expected to be true
         l2 = [48, 66.1]
         l1 = [48, 66.1, 67.1]
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 1.0, 0.0])
