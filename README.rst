@@ -70,7 +70,7 @@ This will install this toolbox as a python package and make it available on the 
 command line interface of the toolbox is properly installed:
 
 .. code-block::
-
+   # print the current version, this is an example the number will differ
    $ mpt --version
    MalePedigreeToolbox 0.1.2
 
