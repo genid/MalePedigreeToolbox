@@ -5,3 +5,5 @@ dist
 build
 male_pedigree_toolbox.egg-info
 temp_out/
+MalePedigreeToolbox/Graphviz/
+.idea/

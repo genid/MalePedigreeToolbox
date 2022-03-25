@@ -105,6 +105,3 @@ class Test(TestCase):
                                                     out_folder / f"{name}_multi_dimensional_plot_clusters.txt",
                                                     out_folder / f"{name}_predicted_dendogram.png",
                                                     out_folder / f"{name}_predicted_multi_dimensional_plot.png"))
-
-
-
