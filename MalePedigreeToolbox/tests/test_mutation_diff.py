@@ -1,36 +1,66 @@
 # TODO add missing tests
 
-import io
 from unittest import TestCase
-import logging
 
-from MalePedigreeToolbox.tests.testing_utility import *
-from MalePedigreeToolbox import mutation_diff
+from MalePedigreeToolbox import mutation_diff as mutation_diff
 
 
 class Test(TestCase):
 
-    def setUp(self) -> None:
-        # ensure the stdout refers to the same stdout
-        logger = logging.getLogger("mpt")
-        logger.level = logging.WARNING
-        self.log_capture = io.StringIO()
-        self.stream_handler = logging.StreamHandler(self.log_capture)
-        logger.addHandler(self.stream_handler)
+    def test_get_score1(self):
+        self.assertEqual(4, mutation_diff.get_score(5, 1))
 
-    def tearDown(self) -> None:
-        logger = logging.getLogger("mpt")
-        logger.removeHandler(self.stream_handler)
+    def test_get_score2(self):
+        self.assertEqual(7, mutation_diff.get_score(5, -2), )
 
-    def _check_warning_messages(self, expected_messages):
-        captured_log = self.log_capture.getvalue()
-        self.log_capture.close()
-        lines = captured_log.strip().split("\n")
-        if len(lines) != len(expected_messages):
-            self.fail("Not enough / to much warning messages generated")
-        for line in lines:
-            if line not in expected_messages:
-                self.fail(f"Unexpected warning message recieved: {line}")
+    def test_get_score3(self):
+        self.assertEqual(6, mutation_diff.get_score(5.9, 0.89))
+
+    def test_get_score4(self):
+        self.assertEqual(5, mutation_diff.get_score(5.9, 0.91))
+
+    def test_get_score5(self):
+        self.assertEqual(1, mutation_diff.get_score(9, 10))
+
+    def test_get_decimal1(self):
+        self.assertEqual(1, mutation_diff.get_decimal(1.1))
+
+    def test_get_decimal2(self):
+        self.assertEqual(0, mutation_diff.get_decimal(1))
+
+    def test_get_decimal3(self):
+        self.assertEqual(0, mutation_diff.get_decimal(1.0))
+
+    def test_get_decimal4(self):
+        self.assertEqual(12345678, mutation_diff.get_decimal(1.12345678))
+
+    def test_get_matrix_score1(self):
+        ms, mdm = mutation_diff.get_matrix_scores([(1, 2.0), (3, 1.0)], [(1, 2.0), (3, 1.0)])
+        self.assertEqual(ms.tolist(), [[0, 1], [1, 0]])
+        self.assertEqual(mdm.tolist(), [[1, 1], [1, 1]])
+
+    def test_get_matrix_score2(self):
+        ms, mdm = mutation_diff.get_matrix_scores([(1, 2.0), (3, 1.0)], [(1, 2.0)])
+        self.assertEqual(ms.tolist(), [[0], [1]])
+        self.assertEqual(mdm.tolist(), [[1], [1]])
+
+    def test_get_matrix_score3(self):
+        ms, mdm = mutation_diff.get_matrix_scores([(1, 1.1), (3, 1.0)], [(1, 2.0)])
+        self.assertEqual(ms.tolist(), [[1], [1]])
+        self.assertEqual(mdm.tolist(), [[0], [1]])
+
+    def test_get_matrix_score4(self):
+        ms, mdm = mutation_diff.get_matrix_scores([(1, 1.12314), (3, 2.0)], [(100, 2.0)])
+        self.assertEqual(ms.tolist(), [[1], [0]])
+        self.assertEqual(mdm.tolist(), [[0], [1]])
+
+    def test_get_matrix_score5(self):
+        ms, mdm = mutation_diff.get_matrix_scores([(1, 2.1), (3, 1.0)], [(1, 2.0), (3, 1.1), (3, 1.0)])
+        self.assertEqual(ms.tolist(), [[1, 1, 2], [1, 1, 0]])
+        self.assertEqual(mdm.tolist(), [[0, 1, 0], [1, 0, 1]])
+
+    def test_sort_allele(self):
+        self.assertEqual([(0, 2), (2, 3), (1, 4)], mutation_diff.sort_allele([2, 4, 3]))
 
 
 class TestMutationDiff(TestCase):
@@ -49,11 +79,13 @@ class TestMutationDiff(TestCase):
     def test_get_mutation_diff3(self):
         l1 = [12]
         l2 = [13]
+        print(mutation_diff.get_mutation_diff(l1, l2, 2))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 2) == [1.0, 1.0])
 
     def test_get_mutation_diff4(self):
         l1 = [55, 63.1, 67.1]
         l2 = [54, 55, 63.1]
+        print(mutation_diff.get_mutation_diff(l1, l2, 4))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 4.0, 1.0])
 
     def test_get_mutation_diff5(self):
@@ -111,6 +143,7 @@ class TestMutationDiff(TestCase):
     def test_get_mutation_diff15(self):
         l1 = [12]
         l2 = [13]
+        print(mutation_diff.get_mutation_diff(l1, l2, 3))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0])
 
     def test_get_mutation_diff16(self):
@@ -167,3 +200,30 @@ class TestMutationDiff(TestCase):
         l2 = [48, 66.1]
         l1 = [48, 66.1]
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 0.0, 0.0])
+
+    def test_get_mutation_diff27(self):
+        l1 = [16.2, 19.2]
+        l2 = [16.2, 18.2, 19.2]
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 1.0, 0.0, 0.0])
+
+    def test_get_mutation_diff28(self):
+        l1 = [55, 63, 67]
+        l2 = [54, 55, 63]
+        # in this case it makes more sense if there are 2 duplicated alleles
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 4.0, 1.0])
+
+    def test_get_mutation_diff29(self):
+        l1 = [12, 16]
+        l2 = [13, 15]
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0])
+
+    def test_get_mutation_diff30(self):
+        l1 = [12, 13, 18]
+        l2 = [12, 13]
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 5.0, 0.0])
+
+    def test_get_mutation_diff31(self):
+        l1 = [12, 14]
+        l2 = [12, 15]
+        print(mutation_diff.get_mutation_diff(l1, l2, 3))
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0])

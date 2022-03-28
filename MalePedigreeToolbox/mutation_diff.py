@@ -98,10 +98,17 @@ def get_mutation_diff(
     if len(alleles2) == 0:
         alleles2 = [0]
 
+    # ensure the biggest allele is always allele 1
+    if len(alleles2) > len(alleles1):
+        temp = alleles1
+        alleles1 = alleles2
+        alleles2 = temp
+
     # try and reconstruct alleles based on expected size, this means figureing out where the duplications are.
     # if only one allele is imbalanced we fix the issue later.
     all_alleles1, all_alleles2 = get_likely_alleles(alleles1, alleles2, expected_size)
     all_scores = []
+    print(all_alleles1, all_alleles2)
     # sometimes we test multiple possible alleles to see the best possible score
     for alleles1, alleles2 in zip(all_alleles1, all_alleles2):
         # sort allele values from smallest to largest to make sure that all assumptions are met, each allele
@@ -109,13 +116,7 @@ def get_mutation_diff(
         alleles1 = sort_allele(alleles1)
         alleles2 = sort_allele(alleles2)
 
-        # ensure the biggest allele is always allele 1
-        if len(alleles2) > len(alleles1):
-            temp = alleles1
-            alleles1 = alleles2
-            alleles2 = temp
-            scores = get_assymetrical_difference(alleles1, alleles2)
-        elif len(alleles1) > len(alleles2):
+        if len(alleles1) > len(alleles2):
             scores = get_assymetrical_difference(alleles1, alleles2)
         else:
             scores = get_symmetrical_difference(alleles1, alleles2)
@@ -135,17 +136,16 @@ def get_likely_alleles(
     alleles2: List[float],
     expected_size: int
 ) -> Tuple[List[List[float]], List[List[float]]]:
-    # no duplicates needed
+    # assumes alleles 1 is bigger or equal to alleles 2
     if len(alleles1) == len(alleles2) == expected_size:
         # but there might be 2 values duplicated if the decimals are unbalanced
-        if get_most_imbalanced_decimal(alleles1, alleles2) is not None:
-            best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
-            best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
-            also_try1 = alleles1.copy()
-            also_try1.append(best_allele1_addition_value)
-            also_try2 = alleles2.copy()
-            also_try2.append(best_allele2_addition_value)
-            return [alleles1, also_try1], [alleles2, also_try2]
+        best_allele2_addition_value = get_best_duplicating_value(alleles1, alleles2)
+        best_allele1_addition_value = get_best_duplicating_value(alleles2, alleles1)
+        also_try1 = alleles1.copy()
+        also_try1.append(best_allele1_addition_value)
+        also_try2 = alleles2.copy()
+        also_try2.append(best_allele2_addition_value)
+        return [alleles1, also_try1], [alleles2, also_try2]
     # duplicate values to expected size, do this in a stepwse manner for bigger differences
     elif len(alleles1) < expected_size and len(alleles2) < expected_size:
         # first make sizes the same in stepwise maner
@@ -154,11 +154,20 @@ def get_likely_alleles(
                 best_allele2_addition_value = get_best_duplicating_value(alleles1, alleles2)
                 alleles2.append(best_allele2_addition_value)
         # now make sizes expected size in stepwise manner
+        also_try1 = alleles1.copy()
+        also_try2 = alleles2.copy()
         for _ in range(expected_size - len(alleles1)):
-            best_allele1_addition_value = get_best_duplicating_value(alleles1, alleles2)
-            best_allele2_addition_value = get_best_duplicating_value(alleles2, alleles1)
-            alleles1.append(best_allele1_addition_value)
-            alleles2.append(best_allele2_addition_value)
+            best_allele2_addition_value = get_best_duplicating_value(also_try1, also_try2)
+            best_allele1_addition_value = get_best_duplicating_value(also_try2, also_try1)
+            also_try1.append(best_allele1_addition_value)
+            also_try2.append(best_allele2_addition_value)
+        if any(value in alleles1 for value in alleles2):
+            for value in alleles2:
+                if value in alleles1:
+                    alleles1.extend([value for _ in range(expected_size - len(alleles1))])
+                    alleles2.extend([value for _ in range(expected_size - len(alleles2))])
+                    return [alleles1, also_try1], [alleles2, also_try2]  # noqa
+        return [also_try1], [also_try2]
     return [alleles1], [alleles2]
 
 
@@ -166,21 +175,35 @@ def get_best_duplicating_value(
     alleles1: List[float],
     alleles2: List[float]
 ) -> float:
+    # get a value in alleles 2 that should be duplicated
     favored_decimal = get_most_imbalanced_decimal(alleles1, alleles2)
     if favored_decimal is None:
         favored_decimal = 0  # doesnt matter just choose one
+
+    # make sure that we chose from a pool that does not contain guaranteed matched values
+    non_matching_alleles1 = []
+    non_matching_alleles2 = alleles2.copy()
+    for value in alleles1:
+        if value in non_matching_alleles2:
+            non_matching_alleles2.remove(value)
+        else:
+            non_matching_alleles1.append(value)
+    # all match return first value
+    if len(non_matching_alleles2) == 0:
+        return alleles2[0]
+
     best_diff_matched = [-1, 1_000_000]  # value best match, differnce. Base values are not possible
     best_diff_unmatched = [-1, 1_000_000]  # value best match, differnce. Base values are not possible
-    for value1 in alleles1:
+    for value1 in non_matching_alleles1:
         for value2 in alleles2:
             if get_decimal(value1) == get_decimal(value2) == favored_decimal:
                 diff = get_score(value1, value2)
                 if diff < best_diff_matched[1]:
-                    best_diff_matched = [value1, diff]
+                    best_diff_matched = [value2, diff]
             else:
                 diff = get_score(value1, value2)
                 if diff < best_diff_unmatched[1]:
-                    best_diff_unmatched = [value1, diff]
+                    best_diff_unmatched = [value2, diff]
     if best_diff_matched[0] != -1:
         return best_diff_matched[0]
     return best_diff_unmatched[0]
@@ -190,12 +213,12 @@ def get_most_imbalanced_decimal(
     alleles1: List[float],
     alleles2: List[float]
 ) -> Union[int, None]:
-    # get the decimal that is the most prevelant allele2 compared to allele1
+    # get the decimal that is the least prevalant in allele2 compared to 1
     decimal_counts = defaultdict(int)
     for value in alleles1:
-        decimal_counts[get_decimal(value)] -= 1
-    for value in alleles2:
         decimal_counts[get_decimal(value)] += 1
+    for value in alleles2:
+        decimal_counts[get_decimal(value)] -= 1
     favored_decimal = [-1, -1]
     for decimal, relative_diff in decimal_counts.items():
         if relative_diff > favored_decimal[1]:
