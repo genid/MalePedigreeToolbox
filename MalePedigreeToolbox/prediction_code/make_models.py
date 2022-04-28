@@ -200,6 +200,17 @@ def rf_params() -> Dict[str, Any]:
     }
 
 
+def mlp_params2() -> Dict[str, Any]:
+    return {
+        "hidden_layer_sizes": [(nr,) for nr in range(20, 45)],
+        "learning_rate": ['constant', 'invscaling', 'adaptive'],
+        "solver": ["sgd", "adam"],
+        "activation": ["identity", "logistic", "tanh", "relu"],
+        "alpha": np.linspace(0.00001, 0.1, 1000),
+        "max_iter": [1000]
+    }
+
+
 def mlp_params() -> Dict[str, Any]:
     return {
         "learning_rate": ['constant', 'invscaling', 'adaptive'],
@@ -246,4 +257,5 @@ ESTIMATORS = {"KNN": (KNeighborsClassifier, knn_params()),
               "RF": (RandomForestClassifier, rf_params()),
               "Gaussian": (GaussianNB, guassian_params()),
               "MLP": (MLPClassifier, mlp_params()),
+              "MLP2": (MLPClassifier, mlp_params2()),
               "SVM": (SVC, svm_params())}

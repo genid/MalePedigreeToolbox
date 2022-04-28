@@ -52,37 +52,41 @@ def simulate_marker_mutation(
         for row in mut_rates_df.iterrows():
             try:
                 marker = row[1].Marker
-                mutation_rate = row[1].Rate
+                mutation_rate_0 = row[1].Prob_0
+                mutation_rate_1 = row[1].Prob_1
+                mutation_rate_2 = row[1].Prob_2
             except AttributeError:
-                LOG.error("Missing column names. Expected a column 'Marker' containing marker names and a column "
-                          "'Rate' containing the mutation rate of each respective marker.")
+                LOG.error("Missing column names. Expected a column 'Marker' containing marker names and 3 columns "
+                          "'Prob_0', 'Prob_1' and 'Prob_2' giving the probability for no mutation, a one step mutation,"
+                          " and a 2 step mutation.")
                 raise utility.MalePedigreeToolboxError("Missing column names. Expected a column 'Marker' containing "
-                                                       "marker names and a column 'Rate' containing the mutation rate"
-                                                       " of each respective marker.")
-            mutation_options = [False, True]
-            mutation_chances = [1 - mutation_rate, mutation_rate]
+                                                       "marker names and 3 columns 'Prob_0', 'Prob_1' and 'Prob_2' "
+                                                       "giving the probability for no mutation, a one step mutation,"
+                                                       " and a 2 step mutation.")
+            mutation_options = [0, 1, 2]
+            mutation_chances = [mutation_rate_0, mutation_rate_1, mutation_rate_2]
             mutation_list = [0 for _ in range(individuals_per_generation)]
             # re-simulate for each new generation to make events independant
             for _ in range(current_generation_number):
-                did_mutate = list(np.random.choice(mutation_options, individuals_per_generation, p=mutation_chances))
-                for index, mutated in enumerate(did_mutate):
+                mutation_amnt = list(np.random.choice(mutation_options, individuals_per_generation, p=mutation_chances))
+                for index, amnt in enumerate(mutation_amnt):
                     # only apply mutation if actually mutated
-                    if not mutated:
+                    if amnt == 0:
                         continue
                     if mutation_list[index] == 0:
                         mutation_list[index] += 1
                     else:
-                        mutation_list[index] += mutate()
+                        mutation_list[index] += mutate(amnt)
 
             generation_dict[marker] = mutation_list
         generation_list.append(generation_dict)
     return generation_list
 
 
-def mutate():
-    mutation_options = [-1, 1]
+def mutate(amnt):
+    mutation_options = [-amnt, amnt]
     mutation_chances = [0.5, 0.5]
-    return np.random.choice(mutation_options, 1, p=mutation_chances)[0]
+    return abs(np.random.choice(mutation_options, 1, p=mutation_chances)[0])
 
 
 def write_simulation_results(
