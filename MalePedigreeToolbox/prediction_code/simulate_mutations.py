@@ -74,7 +74,7 @@ def simulate_marker_mutation(
                     if amnt == 0:
                         continue
                     mutate_amnt = mutate(amnt)
-                    mutation_list[index] = mutate_amnt
+                    mutation_list[index] += mutate_amnt
                     mutation_list[index] = abs(mutation_list[index])
             generation_dict[marker] = mutation_list
         generation_list.append(generation_dict)
