@@ -202,10 +202,12 @@ def rf_params() -> Dict[str, Any]:
 
 def mlp_params2() -> Dict[str, Any]:
     return {
-        "hidden_layer_sizes": [(nr,) for nr in range(20, 45)],
+        "hidden_layer_sizes": [(nr1,) for nr1 in range(50, 100)],
         "learning_rate": ['constant', 'invscaling', 'adaptive'],
         "solver": ["sgd", "adam"],
         "activation": ["identity", "logistic", "tanh", "relu"],
+        "beta_1": np.linspace(0.5, 0.99, 50),
+        "beta_2": np.linspace(0.99, 0.9999, 1000),
         "alpha": np.linspace(0.00001, 0.1, 1000),
         "max_iter": [1000]
     }

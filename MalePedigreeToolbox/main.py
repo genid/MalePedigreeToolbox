@@ -417,7 +417,7 @@ def add_make_models_parser(subparsers):
     make_models_parser.add_argument("-mt", "--model_types",
                                     help="The different types of models to create a predictor for. The predictor is "
                                          "always a classifier.",
-                                    choices=["KNN", "LDA", "logistic", "QDA", "RF", "Gaussian", "MLP", "SVM"],
+                                    choices=["KNN", "LDA", "logistic", "QDA", "RF", "Gaussian", "MLP", "SVM", "MLP2"],
                                     required=True, nargs="+", metavar="STRING(OPTIONAL)")
     make_models_parser.add_argument("-cv", "--cv_splits",
                                     help="Cross validation splits. Leaf one out cross validation is not supported. In "
