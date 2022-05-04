@@ -108,7 +108,6 @@ def get_mutation_diff(
     # if only one allele is imbalanced we fix the issue later.
     all_alleles1, all_alleles2 = get_likely_alleles(alleles1, alleles2, expected_size)
     all_scores = []
-    print(all_alleles1, all_alleles2)
     # sometimes we test multiple possible alleles to see the best possible score
     for alleles1, alleles2 in zip(all_alleles1, all_alleles2):
         # sort allele values from smallest to largest to make sure that all assumptions are met, each allele

@@ -73,11 +73,9 @@ def simulate_marker_mutation(
                     # only apply mutation if actually mutated
                     if amnt == 0:
                         continue
-                    if mutation_list[index] == 0:
-                        mutation_list[index] += 1
-                    else:
-                        mutation_list[index] += mutate(amnt)
-
+                    mutate_amnt = mutate(amnt)
+                    mutation_list[index] += mutate_amnt
+                    mutation_list[index] = abs(mutation_list[index])
             generation_dict[marker] = mutation_list
         generation_list.append(generation_dict)
     return generation_list
@@ -86,7 +84,7 @@ def simulate_marker_mutation(
 def mutate(amnt):
     mutation_options = [-amnt, amnt]
     mutation_chances = [0.5, 0.5]
-    return abs(np.random.choice(mutation_options, 1, p=mutation_chances)[0])
+    return np.random.choice(mutation_options, 1, p=mutation_chances)[0]
 
 
 def write_simulation_results(

@@ -411,8 +411,8 @@ def add_make_models_parser(subparsers):
                                          " to very poor models.",
                                     metavar="FILE", required=True, type=utility.check_in_file)
     make_models_parser.add_argument("-o", "--outdir", dest="outdir",
-                                    help="Folder where the final models, evaluation parameters and evaluation figures"
-                                         "are places", metavar="FOLDER", required=True,
+                                    help="Folder where the final models, evaluation parameters and evaluation figures "
+                                         "are placed.", metavar="FOLDER", required=True,
                                     type=lambda path: utility.check_create_out_folder(path, force=FORCE))
     make_models_parser.add_argument("-mt", "--model_types",
                                     help="The different types of models to create a predictor for. The predictor is "
