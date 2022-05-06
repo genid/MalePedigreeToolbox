@@ -108,7 +108,6 @@ def learn_models(
             y_train = response_variable[index_train]
             x_test = learning_data[index_test]
             y_test = response_variable[index_test]
-
             if parameter_choice_cv == 1:
                 indexes = list(range(len(y_train)))
                 random.shuffle(indexes)
