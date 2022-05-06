@@ -360,3 +360,5 @@ base folder.
 
 This will create all the files in a folder called output_directory located in the folder from which this command was
 executed as well as a run.log file containing similar information to what was put on the command line.
+
+Some additional notes when running analysis with the example files:

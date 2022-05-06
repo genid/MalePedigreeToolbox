@@ -293,8 +293,8 @@ def add_dendogram_parser(subparsers):
                                              help="Draw plots based on mutation distances in a pedigree, this can be "
                                                   "dendrograms or multi-dimensional scaling plots.")
     dendogram_parser.add_argument("-fm", "--full_marker_csv", help="The file containing full mutation "
-                                                                   "differentiations (-fo) generated with the mut_diff"
-                                                                   " command",
+                                                                   "differentiations (-fo / full_out.csv)"
+                                                                   " generated with the mut_diff command",
                                   required=True, metavar="FILE", type=utility.check_in_file)
     dendogram_parser.add_argument("-mr", "--marker_rates", help="File with mutation rates of all markers present in "
                                                                 "full marker file. The expected format is a csv file "
@@ -418,7 +418,7 @@ def add_make_models_parser(subparsers):
                                     help="The different types of models to create a predictor for. The predictor is "
                                          "always a classifier.",
                                     choices=["KNN", "LDA", "logistic", "QDA", "RF", "Gaussian", "MLP", "SVM", "MLP2"],
-                                    required=True, nargs="+", metavar="STRING(OPTIONAL)")
+                                    required=True, nargs="+")
     make_models_parser.add_argument("-cv", "--cv_splits",
                                     help="Cross validation splits. Leaf one out cross validation is not supported. In "
                                          "total as many final models as cv splits will be created. If 1 is provided a "

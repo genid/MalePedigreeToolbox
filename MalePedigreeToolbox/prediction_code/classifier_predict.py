@@ -237,7 +237,13 @@ def create_plots(outdir: Path, pred_df: pd.DataFrame, samples: List[str]):
             fig = plt.figure(num=1, clear=True)
             plt.plot(x_values, prediction)
 
-            pedigree, name1, name2 = samples[index].split("_")
+            try:
+                pedigree, name1, name2 = samples[index].split("_")
+            except ValueError:
+                # in case the name is in a different format
+                pedigree = samples[index]
+                name1 = "name1"
+                name2 = "name2"
 
             plt.fill(
                 [_99_indexes[0] + 1, *list(range(_99_indexes[0] + 1, _99_indexes[1] + 2)), _99_indexes[1] + 1],
