@@ -125,14 +125,14 @@ All of these packages can be installed with pip:
    # one at a time
    $ pip install <package name>
    # or all at once
-   $ pip install requirements.txt
+   $ pip install -r requirements.txt
 
 Running
 =======
 
 There are a number of different functionalities that can be used from this toolkit. Here follows an explanation for each
 of these functionalities with some example in and outputs. The examples are for the command line but the same applies
-for the inputs of the GUI unless statet otherwise. Alternatively you can always make use of -h or --help to get an
+for the inputs of the GUI unless stated otherwise. Alternatively you can always make use of -h or --help to get an
 overview of all options available for a certain subcommand.
 
 Pedigree investigation commands
@@ -150,10 +150,10 @@ Example command:
 
 .. code-block::
 
-   $ mpt distances -i tgf_folder -o pairwise_distances.csv
+   $ mpt distances -t example_tgfs -o output_folder
 
 This will create a comma separated values (csv) file containing the generational distance between all individuals of
-each pedigree.
+each pedigree in the specified output folder.
 
 Counting mutations between alleles of markers (mut_diff)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -168,12 +168,14 @@ Example command:
 
 .. code-block::
 
-   $ mpt mut_diff -af allele_file.csv -df optional_distance_file.csv -fo full_output_file.csv -so summarized_output_file.csv -do meiotic_mutation_rates.csv
+   $ mpt mut_diff -af example_alleles.csv -df distances_output_folder/distances.csv -o output_folder
 
 This always results in at least 2 files. Firstly, a full output file containing the number of mutations that occured
 between all individuals of a pedigree for all markers for each allele. Secondly, a summary output file that takes the mutations for
 all markers together and shows the number of mutations between all individuals of a pedigree. If a distance file was
-specified then percentage of mutation is calculated for each number of meiosis present in the provided pedigrees.
+specified then percentage of mutation is calculated for each number of meiosis present in the provided pedigrees. The -pf
+flag can be specified as well to generate a file that can be used to simulate data for creating machine learning models
+for the prediction of generational distance.
 
 Infering pedigree mutation events (ped_mut_graph)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -186,7 +188,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt ped_mut_graph -af allele_file.csv -t tgf_folder -o output_folder
+   $ mpt ped_mut_graph -af example_allelles.csv -t example_tgfs -o output_folder
 
 This will generate a pedigree for each marker containing the number of mutations that occured between descendants in the
 pedigree. It will also contain an overview graph for each pedigreewhere all unique sets of alleles get their own color.
@@ -227,7 +229,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt draw_pedigrees -fm full_mutation_distances.csv -mr marker_mutation_rates_file.csv -o output_folder -t both
+   $ mpt draw_pedigrees -fm mut_diff_out/full_out.csv -mr example_marker_rates.csv -o output_folder -t both
 
 This will produce a dendrogram or multi-dimensional scaling (MDS) plot or both for each pedigree present in the full
 mutation distances file. Besides that text files are provided that contain the clusters, in order to easily work with
@@ -266,7 +268,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt simulate -i marker_rate_file.csv -o simulated_mutations.csv -n 10000 -g 50
+   $ mpt simulate -i marker_rate_file.csv -o output_folder -n 10000 -g 50
 
 This will generate one file containing the simulated mutations for each marker of each individual
 over all generations. We recommend generating for at least 10.000 individuals per generation. An example of  the
@@ -278,14 +280,14 @@ Create classification models from simulated data (make_models) (command line onl
 Create classification models that predict a generational distance between 2 individuals of 1 till the number of
 simulated generations. There are a number of different models that can be chosen from. From our experience the best
 performing models are the multi-layer perceptron, support vector machines (SVM, scale very badly with large datasets) and
-linear discriminant analysis (LDA). Depending on the model this can run for quite a while. It is also advised to a
+linear discriminant analysis (LDA). Depending on the model this can run for quite a while. It is also advised to use a
 large number of cores if available to speed up the calculations.
 
-Example command:
+Example command (this command runs for a long time):
 
 .. code-block::
 
-   $ mpt make_models -i simulated_data.csv -o output_folder -mt MDS LDA -c -1
+   $ mpt make_models -i simulated_data.csv -o output_folder -mt MLP LDA -c -1
 
 This will create a pickled RandomizedSearchCV object containing the model. These can be used by the final component of
 these comands to predict the generational distance between individuals.
@@ -361,4 +363,5 @@ base folder.
 This will create all the files in a folder called output_directory located in the folder from which this command was
 executed as well as a run.log file containing similar information to what was put on the command line.
 
-Some additional notes when running analysis with the example files:
+Some additional notes when running analysis with the example files, when running the classifier_predict command with
+the example file you should use the YFP model since the example data is for that model.
