@@ -133,8 +133,8 @@ def get_column_order(
 ) -> List[str]:
     if model_path is not None:
         with open(training_input_file) as f:
-            header_line = f.readline()
-        return header_line.split(",")
+            header_line = f.readline().strip()
+        return header_line.split(",")[1:-1]
     else:
         return MARKER_MAPPING[predefined_model_name]
 
