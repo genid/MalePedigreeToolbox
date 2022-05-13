@@ -74,7 +74,7 @@ def read_graph(
             if len(values) != 2:
                 # empty line ignore and continue
                 if len(values) != 1:
-                    LOG.warning(f"File {file.name} contains an edge between {len(values)} nodes. "
+                    LOG.warning(f"File {file.name} contains an edge between {len(values)} node(s). "
                                 f"An edge should be between 2 nodes only.")
                 continue
 

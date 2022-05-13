@@ -139,12 +139,15 @@ def parse_tgf(
 
 
 class FullPedgreeGraph:
-    """Save information of all markers for making a complete plot"""
-    def __init__(self, pedigree_marker_dict: "PedigreeMarkerGraph"):
-        self.store, self.id_node_mapping = self._innitiate_store(pedigree_marker_dict)
+    """Save information of all markers with all alleles for making a complete plot"""
+    def __init__(self, pedigree_marker_graph: "PedigreeMarkerGraph"):
+        self.store, self.id_node_mapping = self._innitiate_store(pedigree_marker_graph)
         self.base_node = next(iter(self.store.keys()))  # assumes sorted dicts of python > 3.6
 
-    def _innitiate_store(self, pedigree_marker_graph):
+    def _innitiate_store(
+        self,
+        pedigree_marker_graph: "PedigreeMarkerGraph"
+    ) -> Tuple[Dict["FullPedigreeNode", List["FullPedigreeNode"]], Dict[str, "FullPedigreeNode"]]:
         next_nodes = [pedigree_marker_graph.get_base_node()]
         self_next_nodes = [FullPedigreeNode(next_nodes[0].id, next_nodes[0].sample)]
         new_store = {}
@@ -169,8 +172,13 @@ class FullPedgreeGraph:
             next_nodes = new_next_nodes
         return new_store, id_mapping
 
-    def merge_pedigree_marker_dict(self, pedigree_marker_graph: "PedigreeMarkerGraph", marker: str):
-        # if this fails the merge should never happen. IS NOT FOOL PROOF
+    def merge_pedigree_marker_dict(
+        self,
+        pedigree_marker_graph: "PedigreeMarkerGraph",
+        marker: str
+    ):
+        """Add a PedigreeMarkerGraph to this object"""
+        # if this fails the merge should never happen
         assert self.base_node.id == pedigree_marker_graph.get_base_node().id
         next_nodes = [pedigree_marker_graph.get_base_node()]
 
@@ -184,7 +192,10 @@ class FullPedgreeGraph:
                 new_next_nodes.extend(child_nodes)
             next_nodes = new_next_nodes
 
-    def get_children(self, parent_node: "FullPedigreeNode") -> List["FullPedigreeNode"]:
+    def get_children(
+        self,
+        parent_node: "FullPedigreeNode"
+    ) -> List["FullPedigreeNode"]:
         try:
             return self.store[parent_node]
         except KeyError:
@@ -219,7 +230,7 @@ class FullPedigreeNode:
 class PedigreeMarkerGraph:
     """
     Store a tgf file in a easily navigable object. Containing the graph stored in both directions for quick look ups.
-    This object is meant to store information for one marker.
+    This object is meant to store allele information for one marker.
     """
     def __init__(self):
         self.store = {}
@@ -732,7 +743,9 @@ def plot_full_pedigree(
                                          output_file.parent / f"pedigree_{pedigree}_all_marker_edge_info.csv")
 
 
-def format_allele(allele):
+def format_allele(
+    allele: List[int]
+) -> str:
     allele = np.array(allele)
     allele = allele[allele != 0]
     allele_string_list = []
@@ -795,7 +808,11 @@ def write_marker_mutations(
 
 
 @thread_termination.ThreadTerminable
-def write_full_pedigree_edge_information(edge_change_dict, outfile):
+def write_full_pedigree_edge_information(
+    edge_change_dict: Dict[str, List[str]],
+    outfile: Path
+):
+    """Write information about the edges that are numbered in the combined pedigree plot"""
     full_text_list = ["edge_id,marker,parent_allele,child_allele"]
     for edge_id, marker_changes in edge_change_dict.items():
         for marker_change in marker_changes:
