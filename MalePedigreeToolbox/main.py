@@ -462,7 +462,8 @@ def add_predict_parser(subparsers):
                                      "The names of the models refer to sets of markers used when creating the models."
                                      " If you want to know if your set applies to a model try it out and an error will"
                                      " be raised if not all required markers are present.",
-                                choices=["RMPLEX", "PPY23", "YFP", "PPY23_RMPLEX", "YFP_RMPLEX"], default=None)
+                                choices=["RMPLEX", "PPY23", "YFP", "PPY23_RMPLEX", "YFP_RMPLEX", "YFORGEN",
+                                         "YFORGEN_RMPLEX"], default=None)
     predict_parser.add_argument("-p", "--plots", help="Specify this argument if all comparissons in the input file "
                                                       "should be plotted, showing the age range at 85, 95 and 99 %% "
                                                       "confidence. If a lot of values are predicted a lot of plots are "

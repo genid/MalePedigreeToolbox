@@ -31,7 +31,7 @@ matplotlib.use('Agg')
 
 
 if getattr(sys, 'frozen', False):
-    data_path = Path(sys._MEIPASS)
+    data_path = Path(sys._MEIPASS)  # noqa
 elif __file__:
     data_path = Path(os.path.dirname(__file__))
 else:
@@ -42,45 +42,67 @@ LOG = logging.getLogger("mpt")
 
 
 # marker orders for the pre-made models
-RMPLEX_MARKER_LIST = ['DYS713', 'DYF1001', 'DYS626', 'DYS711', 'DYS1010', 'DYS612', 'DYF1002', 'DYS724', 'DYS1005',
-                      'DYF403S1b', 'DYS449', 'DYS1012', 'DYS518', 'DYF404S1', 'DYS442', 'DYF403S1a', 'DYS576', 'DYS547',
-                      'DYS712', 'DYS570', 'DYS1007', 'DYF393S1', 'DYF1000', 'DYS627', 'DYS1003', 'DYF399S1', 'DYS1013',
-                      'DYF387S1', 'DYR88', 'DYS526b']
-PPY23_MARKER_LIST = ['DYS392', 'DYS643', 'DYS549', 'DYS438', 'DYS458', 'DYS385', 'DYS19', 'DYS481', 'DYS635', 'DYS576',
-                     'DYS391', 'DYS448', 'DYS389I', 'DYS390', 'DYS533', 'DYS456', 'DYS570', 'DYS439', 'YGATAH4',
-                     'DYS393', 'DYS437', 'DYS389II']
-PPY23_RMPLEX_MARKER_LIST = ['DYS576', 'DYS449', 'DYS391', 'DYS713', 'DYS712', 'DYS1010', 'DYF403S1b', 'DYS1005',
-                            'DYR88', 'DYS533', 'DYS393', 'DYS1013', 'DYS392', 'DYS570', 'DYS711', 'DYS1007', 'DYS481',
-                            'DYS643', 'DYS442', 'DYS547', 'DYF1001', 'DYS635', 'DYF1000', 'DYS438', 'DYS458',
-                            'YGATAH4', 'DYF404S1', 'DYS626', 'DYS448', 'DYS390', 'DYS437', 'DYS385', 'DYS1003',
-                            'DYS549', 'DYF1002', 'DYS389I', 'DYF399S1', 'DYS518', 'DYS1012', 'DYS612', 'DYF387S1',
-                            'DYS439', 'DYS19', 'DYS526b', 'DYS389II', 'DYS456', 'DYS724', 'DYF403S1a', 'DYF393S1',
-                            'DYS627']
-YFP_MARKER_LIST = ['DYS392', 'DYS570', 'DYS438', 'DYS456', 'DYF387S1', 'DYS19', 'DYS449', 'DYS576', 'DYS439', 'DYS460',
-                   'DYS448', 'DYS389II', 'DYS391', 'DYS437', 'DYS389I', 'DYS393', 'DYS635', 'DYS627', 'DYS458',
-                   'DYS518', 'YGATAH4', 'DYS481', 'DYS533', 'DYS390', 'DYS385']
-YFP_RMPLEX_MARKER_LIST = ['DYS392', 'DYS460', 'DYF1002', 'DYS456', 'DYS627', 'DYR88', 'DYS391', 'DYS626', 'DYS1013',
-                          'DYS1007', 'DYS1003', 'DYS389I', 'DYS442', 'DYS481', 'YGATAH4', 'DYF393S1', 'DYF403S1b',
-                          'DYS448', 'DYS547', 'DYS713', 'DYF387S1', 'DYS635', 'DYS711', 'DYS19', 'DYS533', 'DYS438',
-                          'DYF404S1', 'DYS390', 'DYS449', 'DYF403S1a', 'DYS389II', 'DYF399S1', 'DYS1010', 'DYS724',
-                          'DYS437', 'DYS570', 'DYS518', 'DYS612', 'DYF1000', 'DYF1001', 'DYS526b', 'DYS1005', 'DYS576',
-                          'DYS1012', 'DYS393', 'DYS458', 'DYS439', 'DYS712', 'DYS385']
+RMPLEX_MARKER_LIST = ['DYF403S1a', 'DYS724', 'DYS711', 'DYS1010', 'DYF1000', 'DYS1012', 'DYF399S1', 'DYS626', 'DYS712',
+                      'DYS547', 'DYS518', 'DYS442', 'DYF1002', 'DYF387S1', 'DYS576', 'DYS1013', 'DYF404S1', 'DYF403S1b',
+                      'DYF393S1', 'DYS526b', 'DYR88', 'DYF1001', 'DYS1007', 'DYS1005', 'DYS1003', 'DYS627', 'DYS612',
+                      'DYS713', 'DYS449', 'DYS570']
+PPY23_MARKER_LIST = ['DYS643', 'DYS549', 'DYS438', 'DYS456', 'DYS570', 'DYS481', 'DYS533', 'DYS448', 'DYS437', 'DYS458',
+                     'DYS385', 'DYS576', 'DYS390', 'DYS392', 'YGATAH4', 'DYS389II', 'DYS439', 'DYS389I', 'DYS391',
+                     'DYS393', 'DYS19', 'DYS635']
+PPY23_RMPLEX_MARKER_LIST = ['DYS570', 'DYS439', 'DYS626', 'DYF403S1a', 'DYF404S1', 'DYF1000', 'DYS635', 'DYS389I',
+                            'DYS724', 'DYF387S1', 'DYS643', 'DYS19', 'DYS1003', 'DYF393S1', 'DYS391', 'DYS393',
+                            'DYS526b', 'YGATAH4', 'DYS385', 'DYF1001', 'DYS1010', 'DYS627', 'DYS711', 'DYS481',
+                            'DYF1002', 'DYS547', 'DYS458', 'DYS1013', 'DYS1012', 'DYS549', 'DYS712', 'DYS392',
+                            'DYS713', 'DYS448', 'DYS1005', 'DYR88', 'DYS442', 'DYS438', 'DYS518', 'DYS390', 'DYF399S1',
+                            'DYS437', 'DYS449', 'DYS389II', 'DYS456', 'DYS576', 'DYS612', 'DYF403S1b', 'DYS1007',
+                            'DYS533']
+YFP_MARKER_LIST = ['DYS392', 'DYS448', 'DYS393', 'DYS627', 'DYS437', 'DYS439', 'DYS19', 'DYS456', 'DYS458', 'DYS391',
+                   'DYS576', 'DYS481', 'DYS389II', 'DYS518', 'YGATAH4', 'DYS570', 'DYS635', 'DYS390', 'DYS385',
+                   'DYS389I', 'DYS449', 'DYF387S1', 'DYS438', 'DYS533', 'DYS460']
+YFP_RMPLEX_MARKER_LIST = ['DYS456', 'YGATAH4', 'DYS724', 'DYS19', 'DYS437', 'DYS393', 'DYS712', 'DYF403S1a',
+                          'DYF404S1', 'DYS460', 'DYS481', 'DYF1002', 'DYF387S1', 'DYS1003', 'DYS612', 'DYS1005',
+                          'DYF399S1', 'DYF403S1b', 'DYS448', 'DYS389II', 'DYS390', 'DYS442', 'DYF1000', 'DYS1012',
+                          'DYS526b', 'DYS385', 'DYS1007', 'DYF1001', 'DYS439', 'DYS626', 'DYS438', 'DYS711', 'DYS533',
+                          'DYS570', 'DYS627', 'DYF393S1', 'DYS391', 'DYS392', 'DYS713', 'DYS1013', 'DYS547', 'DYS389I',
+                          'DYS518', 'DYS449', 'DYS635', 'DYS458', 'DYS576', 'DYR88', 'DYS1010']
+YFORGEN_MARKER_LIST = ['DYS438', 'DYS389II', 'DYS385', 'DYS570', 'DYS455', 'DYS459', 'DYS533', 'DYS391', 'DYS607',
+                       'DYS724', 'DYS518', 'DYS392', 'DYS643', 'DYS447', 'DYS460', 'DYS426', 'DYS627', 'DYS388',
+                       'DYS464', 'DYF387S1', 'DYS439', 'DYS456', 'DYS390', 'DYS635', 'DYS19', 'DYS454', 'DYS442',
+                       'YCAII', 'DYS576', 'DYS549', 'DYS389I', 'YGATAH4', 'DYS437', 'DYS448', 'DYS393', 'DYS449',
+                       'DYS458', 'DYS481']
+YFORGEN_RMPLEX_LIST = ['DYS439', 'DYS724', 'DYS455', 'DYS449', 'DYS518', 'DYF403S1b', 'DYS549', 'DYS390', 'DYS389II',
+                       'DYS713', 'DYS1013', 'DYS437', 'DYS1007', 'YGATAH4', 'DYS447', 'DYS456', 'DYS612', 'DYS712',
+                       'DYS1012', 'DYS533', 'DYS464', 'DYS643', 'DYS627', 'DYS547', 'DYS481', 'DYS458', 'DYS454',
+                       'DYS576', 'DYF1002', 'DYS392', 'DYS607', 'DYS19', 'DYS459', 'DYS389I', 'DYS385', 'DYS1005',
+                       'DYF399S1', 'DYS626', 'DYR88', 'DYF404S1', 'DYS711', 'DYF403S1a', 'DYS635', 'DYS388', 'DYS526b',
+                       'DYS391', 'DYS393', 'DYF393S1', 'DYF387S1', 'DYS570', 'DYS426', 'DYF1000', 'YCAII', 'DYS438',
+                       'DYS1003', 'DYS442', 'DYS448', 'DYS460', 'DYS1010', 'DYF1001']
 
 MARKER_MAPPING = {"RMPLEX": RMPLEX_MARKER_LIST, "PPY23": PPY23_MARKER_LIST, "YFP": YFP_MARKER_LIST,
                   "PPY23_RMPLEX": PPY23_RMPLEX_MARKER_LIST, "YFP_RMPLEX": YFP_RMPLEX_MARKER_LIST}
 
 
-try:
-    MODELS = {"RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_RMPlex.joblib"),
-              "PPY23": joblib.load(data_path / "models" / "MLPClassifier_PPY23.joblib"),
-              "PPY23_RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_PPY23_RMplex.joblib"),
-              "YFP": joblib.load(data_path / "models" / "MLPClassifier_YFP.joblib"),
-              "YFP_RMPLEX": joblib.load(data_path / "models" / "MLPClassifier_YFP_RMplex.joblib")}
-except FileNotFoundError:
-    MODELS = {}
-
 # speeds up calculation of prediction ranges a lot, since a lot of the same results are present
 PREDICTION_RANGE_CACHE = {}
+
+
+def load_model_paths():
+    models = {"RMPLEX": data_path / "models" / "RMplex_model.joblib",
+              "PPY23": data_path / "models" / "PPY23_model.joblib",
+              "PPY23_RMPLEX": data_path / "models" / "PPY23_RMplex_model.joblib",
+              "YFP": data_path / "models" / "YFP_model.joblib",
+              "YFP_RMPLEX": data_path / "models" / "YFP_RMplex_model.joblib",
+              "YFORGEN": data_path / "models" / "YForgen_model.joblib",
+              "YFORGEN_RMPLEX": data_path / "models" / "YForgen_RMplex_model.joblib"}
+    # make sure to not change size during itteration
+    for name, path in list(models.items()):
+        if not path.exists():
+            LOG.warning(f"Failed to find pre-defined model for {name}")
+            del models[name]
+    return models
+
+
+MODELS = load_model_paths()
 
 
 @thread_termination.ThreadTerminable
@@ -147,14 +169,12 @@ def get_model(
     if model_path is not None:
         return joblib.load(model_path)
     else:
-        # models failed to load because executing from executable
-        if len(MODELS) == 0:
-            LOG.error("Failed to load pre-compiled models. Make sure that these models are present in the executable "
-                      "directory in a folder called 'models'.")
-            raise utility.MalePedigreeToolboxError("Failed to load pre-compiled models. Make sure that these models "
-                                                   "are present in the executable directory in a folder called"
-                                                   " 'models'.")
-        return MODELS[predefined_model_name]
+        try:
+            return joblib.load(MODELS[predefined_model_name])
+        except KeyError:
+            LOG.error("Failed to load pre-compiled model. The program can not find the pre-computed models.")
+            raise utility.MalePedigreeToolboxError("Failed to load pre-compiled model. The program can not find"
+                                                   " the pre-computed models.")
 
 
 @thread_termination.ThreadTerminable
