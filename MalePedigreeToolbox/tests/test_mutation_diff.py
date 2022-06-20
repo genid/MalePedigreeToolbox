@@ -1,4 +1,3 @@
-# TODO add missing tests
 
 from unittest import TestCase
 
@@ -79,13 +78,11 @@ class TestMutationDiff(TestCase):
     def test_get_mutation_diff3(self):
         l1 = [12]
         l2 = [13]
-        print(mutation_diff.get_mutation_diff(l1, l2, 2))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 2) == [1.0, 1.0])
 
     def test_get_mutation_diff4(self):
         l1 = [55, 63.1, 67.1]
         l2 = [54, 55, 63.1]
-        print(mutation_diff.get_mutation_diff(l1, l2, 4))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 4) == [0.0, 0.0, 4.0, 1.0])
 
     def test_get_mutation_diff5(self):
@@ -143,7 +140,6 @@ class TestMutationDiff(TestCase):
     def test_get_mutation_diff15(self):
         l1 = [12]
         l2 = [13]
-        print(mutation_diff.get_mutation_diff(l1, l2, 3))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0])
 
     def test_get_mutation_diff16(self):
@@ -225,5 +221,11 @@ class TestMutationDiff(TestCase):
     def test_get_mutation_diff31(self):
         l1 = [12, 14]
         l2 = [12, 15]
-        print(mutation_diff.get_mutation_diff(l1, l2, 3))
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0])
+
+    def test_get_mutation_diff32(self):
+        l1 = [10, 11]
+        l2 = [10, 11, 12]
+        l3 = [10]
+        print(mutation_diff.get_mutation_diff(l1, l2, 3))
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 2.0])
