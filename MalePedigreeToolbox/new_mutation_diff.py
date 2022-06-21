@@ -1,6 +1,27 @@
-from typing import List, Union, Set
+from typing import Union, Tuple, List, Dict, FrozenSet, Any, TYPE_CHECKING, Set
 from math import isclose, ceil
 from collections import defaultdict
+import pandas as pd
+import numpy as np
+import logging
+import math
+from statsmodels.stats.proportion import proportion_confint
+
+# own imports
+from MalePedigreeToolbox import utility
+from MalePedigreeToolbox import thread_termination
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+LOG: logging.Logger = logging.getLogger("mpt")
+SUMMARY_OUT: str = "summary_out.csv"
+FULL_OUT: str = "full_out.csv"
+DIFFERENTIATION_OUT: str = "differentiation_out.csv"
+PREDICT_OUT: str = "predict_out.csv"
+
+SCORE_CACHE: Dict[FrozenSet, List[int]] = {}  # used to store already computed scores, speed up
 
 
 class Allele:
@@ -109,13 +130,7 @@ class DifferenceMatrix:
 
         # in case both rows and columns need duplications we can already add some
         if self.nr_rows < expected_size:
-            for _ in range(expected_size - self.nr_rows):
-                rindex, cindex = self._get_minimum_coordinate()
-                self._rows.append(self._rows[rindex].copy())
-                self.allele1.duplicate_component(rindex)
-                self.allele2.duplicate_component(cindex)
-                for row in self._rows:
-                    row.append(row[cindex])
+            self._duplicate_simultanious(expected_size)
 
     def _equalize_decimals(self):
         equalizables = self.allele1.get_equalizable_decimals(self.allele2)
@@ -162,6 +177,15 @@ class DifferenceMatrix:
             min_index = index
         return min_index
 
+    def _duplicate_simultanious(self, expected_size):
+        for _ in range(expected_size - self.nr_rows):
+            rindex, cindex = self._get_minimum_coordinate()
+            self._rows.append(self._rows[rindex].copy())
+            self.allele1.duplicate_component(rindex)
+            self.allele2.duplicate_component(cindex)
+            for row in self._rows:
+                row.append(row[cindex])
+
     def _get_minimum_coordinate(self):
         # get the coordinate with the minum value in the matrix
         lowest_value = self._rows[0][0]
@@ -198,22 +222,9 @@ class DifferenceMatrix:
 
         # if there are more rows add allele components by duplicating existing components
         if len(covered_rows) < self.nr_rows:
-
-            unused_rows = [i for i in range(len(self._rows)) if i not in covered_rows]
-            for row_index in unused_rows:
-                min_value = self._rows[row_index][0]
-                min_index = 0
-                for col_index, value in enumerate(self._rows[row_index]):
-                    if value < min_value:
-                        min_value = value
-                        min_index = col_index
-                # making matrix complete, should go at some point
-                for row in self._rows:
-                    row.append(row[min_index])
-                scores.append(min_value)
-                score_rows.append(row_index)
-                # make sure to add the duplication to the allele
-                self.allele2.duplicate_component(min_index)
+            more_scores, more_rows = self._duplicate_columns(covered_rows)
+            scores.extend(more_scores)
+            score_rows.extend(more_rows)
 
         # sort scores based on the order of the longest allele (allele1)
         zipped_values = zip(scores, score_rows)
@@ -224,6 +235,24 @@ class DifferenceMatrix:
             if scores[index] > self.NO_MATCHING_DECIMAL_PENALTY:
                 scores[index] -= self.NO_MATCHING_DECIMAL_PENALTY
         return scores
+
+    def _duplicate_columns(self, covered_rows):
+        unused_rows = [i for i in range(len(self._rows)) if i not in covered_rows]
+        scores = []
+        for row_index in unused_rows:
+            min_value = self._rows[row_index][0]
+            min_index = 0
+            for col_index, value in enumerate(self._rows[row_index]):
+                if value < min_value:
+                    min_value = value
+                    min_index = col_index
+            # making matrix complete, should go at some point
+            for row in self._rows:
+                row.append(row[min_index])
+            scores.append(min_value)
+            # make sure to add the duplication to the allele
+            self.allele2.duplicate_component(min_index)
+        return scores, unused_rows
 
     @property
     def nr_rows(self):
@@ -256,10 +285,278 @@ def get_mutation_diff(
     child_allele: Allele,
     expected_size: int
 ) -> List[float]:
+    cache_key = frozenset([frozenset(str(parent_allele)), frozenset(str(child_allele)), expected_size])
+    if cache_key in SCORE_CACHE:
+        return SCORE_CACHE[cache_key]
+
     # will permanently modify alleles in order to include duplicates
     matrix = DifferenceMatrix(parent_allele, child_allele, expected_size)
     score = matrix.get_optimal_score()
+
+    # alleles can change so make sure to remake key
+    cache_key = frozenset([frozenset(str(parent_allele)), frozenset(str(child_allele)), expected_size])
+    SCORE_CACHE[cache_key] = score
     return score
+
+
+@thread_termination.ThreadTerminable
+def write_differentiation_rates(
+    mutation_dict_list: List[Dict[str, Any]],
+    distance_dict: Dict[str, Dict[str, int]],
+    outfile: "Path"
+):
+    # the rate of differentiation given a certain distance of a 2 subjects in a pair
+    meiosis_dict = {}
+    covered_pairs = set()
+    mutated_pairs = set()
+    warned_pedigrees = set()  # make sure the log is less spammy
+    for dictionary in mutation_dict_list:
+        differentiated = dictionary["Total"] != 0
+        pedigree = dictionary["Pedigree"]
+        pair = dictionary["From"] + dictionary["To"]
+        reverse_pair = dictionary["To"] + dictionary["From"]
+
+        if pedigree not in distance_dict:
+            if pedigree not in warned_pedigrees:
+                LOG.warning(f"Can not include pedigree {pedigree} in differentiation rate calculation since they are"
+                            f" not present in the distance file. This is likely caused by different names in the TGF"
+                            f" files and alleles file.")
+            warned_pedigrees.add(pedigree)
+            continue
+
+        if pair in distance_dict[pedigree]:
+            distance = distance_dict[pedigree][pair]
+        elif reverse_pair in distance_dict[pedigree]:
+            distance = distance_dict[pedigree][reverse_pair]
+        else:
+            LOG.warning(f"Can not include pair {dictionary['To']}-{dictionary['From']} in the differentiation rate "
+                        f"calculation since they are not present in the distance file.  This is likely caused by "
+                        f"different names in the TGF files and alleles file.")
+            continue
+        if distance in meiosis_dict:
+            if pair not in covered_pairs:
+                meiosis_dict[distance][0] += 1
+        else:
+            meiosis_dict[distance] = [1, 0]
+        if pair not in mutated_pairs and differentiated:
+            meiosis_dict[distance][1] += 1
+            mutated_pairs.add(pair)
+        covered_pairs.add(pair)
+    meiosis_list = []
+    for key, values in meiosis_dict.items():
+        ci = [str(round(x * 100, 2)) for x in proportion_confint(values[1], values[0], method='beta')]
+        meiosis_list.append((key, *values, round(values[1] / values[0] * 100, 2), *ci))
+    meiosis_list.sort(key=lambda x: x[0])
+
+    final_text = "Meioses,Pairs,Differentiated,Differentiation_rate(%),Clopper-Pearson CI lower bound, " \
+                 "Clopper-Pearson CI upper bound\n"
+    for values in meiosis_list:
+        final_text += ",".join(map(str, values)) + "\n"
+
+    with open(outfile, "w") as f:
+        f.write(final_text)
+
+
+@thread_termination.ThreadTerminable
+def sample_combinations(
+    samples: List[str]
+) -> List[Tuple[str, str]]:
+    # get unique pairs of all combinations
+    combinations = []
+    for index, sample in enumerate(samples):
+        for inner_index in range(index + 1, len(samples)):
+            combinations.append((sample, samples[inner_index]))
+    return combinations
+
+
+@thread_termination.ThreadTerminable
+def read_distance_file(
+    distance_file: "Path"
+) -> Dict[str, Dict[str, int]]:
+    # read the distance file into a quickly accesible dictionary
+    distance_dict = {}
+    with open(distance_file) as f:
+        f.readline()  # skip header
+        for line in f:
+            values = line.strip().split(",")
+            pedigree_name = values[0]
+            sample1 = values[1]
+            sample2 = values[2]
+            distance = int(values[3])
+            pair = f"{sample1}{sample2}"
+            if pedigree_name in distance_dict:
+                distance_dict[pedigree_name][pair] = distance
+            else:
+                distance_dict[pedigree_name] = {pair: distance}
+    return distance_dict
+
+
+@thread_termination.ThreadTerminable
+def main(name_space):
+    LOG.info("Starting with calculating differentiation rates")
+
+    alleles_file = name_space.allele_file
+    distance_file = name_space.dist_file
+    outdir = name_space.outdir
+    include_predict_file = name_space.prediction_file
+    if alleles_file.suffix == ".xlsx":
+        alleles_df = pd.read_excel(alleles_file, dtype={'Pedigree': str, 'Sample': str, 'Marker': str,
+                                                        'Allele_1': np.float64, 'Allele_2': np.float64,
+                                                        'Allele_3': np.float64, 'Allele_4': np.float64,
+                                                        'Allele_5': np.float64, 'Allele_6': np.float64})
+    elif alleles_file.suffix == ".csv":
+        alleles_df = pd.read_csv(alleles_file, dtype={'Pedigree': str, 'Sample': str, 'Marker': str,
+                                                      'Allele_1': np.float64, 'Allele_2': np.float64,
+                                                      'Allele_3': np.float64, 'Allele_4': np.float64,
+                                                      'Allele_5': np.float64, 'Allele_6': np.float64})
+    else:
+        LOG.error(f"Unsupported file type .{alleles_file.suffix} for the alleles file.")
+        raise utility.MalePedigreeToolboxError(f"Unsupported file type .{alleles_file.suffix}"
+                                               f" for the alleles file.")
+    run(alleles_df, distance_file, outdir, include_predict_file)
+
+
+def sort_pedigree_information(
+    alleles_list_dict: List[Dict[str, Any]]
+) -> Tuple[Dict[str, Dict[str, Dict[str, List[float]]]], Dict[str, Dict[str, int]]]:
+    grouped_alleles_dict = {}
+    longest_allele_per_pedigree_marker = {}
+    for dictionary in alleles_list_dict:
+        try:
+            pedigree_name = dictionary.pop("Pedigree")
+            sample_name = dictionary.pop("Sample")
+            marker = dictionary.pop("Marker")
+        except KeyError:
+            LOG.error("Incorrect alleles file. The following three column names are required: 'Pedigree', 'Sample', "
+                      "'Marker'.")
+            raise utility.MalePedigreeToolboxError("Incorrect alleles file. The following three column names are "
+                                                   "required: 'Pedigree', 'Sample', 'Marker'.")
+        allele = [x for x in dictionary.values() if not math.isnan(x)]
+        if pedigree_name not in longest_allele_per_pedigree_marker:
+            longest_allele_per_pedigree_marker[pedigree_name] = {}
+        if marker not in longest_allele_per_pedigree_marker[pedigree_name]:
+            longest_allele_per_pedigree_marker[pedigree_name][marker] = len(allele)
+        else:
+            longest_allele_per_pedigree_marker[pedigree_name][marker] = \
+                max(longest_allele_per_pedigree_marker[pedigree_name][marker], len(allele))
+        if pedigree_name in grouped_alleles_dict:
+            if sample_name in grouped_alleles_dict[pedigree_name]:
+                grouped_alleles_dict[pedigree_name][sample_name][marker] = allele
+            else:
+                grouped_alleles_dict[pedigree_name][sample_name] = {marker: allele}
+        else:
+            grouped_alleles_dict[pedigree_name] = {sample_name: {marker: allele}}
+    return grouped_alleles_dict, longest_allele_per_pedigree_marker
+
+
+@thread_termination.ThreadTerminable
+def run(
+    alleles_df: pd.DataFrame,
+    distance_file: "Path",
+    outdir: "Path",
+    include_predict_file: bool
+):
+
+    alleles_list_dict = alleles_df.to_dict('records')
+
+    if len(alleles_list_dict) == 0:
+        LOG.error("Empty alleles file provided")
+        raise utility.MalePedigreeToolboxError("Empty alleles file provided")
+    total_alleles_specified = len(alleles_list_dict[0]) - 3
+
+    # pre-sort pedigree information for quick retrieval of information
+    LOG.debug("Pre-sorting alleles information")
+    grouped_alleles_dict, longest_allele_per_pedigree_marker = sort_pedigree_information(alleles_list_dict)
+
+    LOG.info("Finished reading both input files")
+    markers = set(alleles_df.Marker)
+
+    LOG.info(f"In total there are {len(markers)} markers being analysed.")
+    mutation_dict = []
+    total_mutation_dict = []
+    predict_pedigrees_list = []
+
+    prev_total = 0
+    # make comparssons within each pedigree
+    for index, (pedigree, pedigree_data) in enumerate(grouped_alleles_dict.items()):
+        sample_names = list(pedigree_data.keys())
+        sample_combs = sample_combinations(sample_names)
+        predict_samples_list = []
+        LOG.info(f"Comparing {len(sample_combs)} allele combinations for pedigree {pedigree}")
+        # for each combination of samples
+        for sample1, sample2 in sample_combs:
+            sample1_data = pedigree_data[sample1]
+            sample2_data = pedigree_data[sample2]
+            total_mutations = 0
+            marker_values = {name: 0 for name in markers}
+            # for each individual marker
+            for marker in markers:
+                count_mutation = 0
+
+                if marker not in sample1_data or marker not in sample2_data:
+                    LOG.warning(f"Marker ({marker}) is not present in {sample1} and {sample2}. The comparisson will be"
+                                f" skipped.")
+                    continue
+                marker_data1 = sample1_data[marker]
+                marker_data2 = sample2_data[marker]
+                mutations = get_mutation_diff(marker_data1, marker_data2,
+                                              longest_allele_per_pedigree_marker[pedigree][marker])
+                [mutations.append(0.0) for _ in range(total_alleles_specified - len(mutations))]
+
+                count_mutation += np.sum(mutations)
+                total_mutations += count_mutation
+                if marker in marker_values and include_predict_file:
+                    marker_values[marker] = count_mutation
+                mutation_dict.append({"Marker": marker, "Pedigree": pedigree, "From": sample1, "To": sample2,
+                                      **{f"Allele_{index + 1}": mutations[index] for index in
+                                         range(total_alleles_specified)}, "Total": count_mutation})
+
+            # for predicting the generational distances
+            if include_predict_file:
+                predict_samples_list.append([f"{pedigree}_{sample1}_{sample2}",
+                                             *[marker_values[name] for name in markers]])
+
+            total_mutation_dict.append({"Pedigree": pedigree, "From": sample1, "To": sample2, "Total": total_mutations})
+
+            LOG.debug(f"Finished calculating differentiation for {index} out of {len(grouped_alleles_dict)}")
+            total, remainder = divmod(index / len(grouped_alleles_dict), 0.05)
+
+            if total != prev_total:
+                LOG.info(f"Calculation progress: {round(5 * total)}%...")
+                prev_total = total
+        if include_predict_file:
+            predict_pedigrees_list.append(predict_samples_list)
+
+    mutation_df = pd.DataFrame(mutation_dict)
+    total_mutation_df = pd.DataFrame(total_mutation_dict)
+
+    mutation_df_cols = ['Pedigree', 'From', 'To', 'Marker',
+                        *[f"Allele_{index + 1}" for index in range(total_alleles_specified)], 'Total']
+    total_mutations_cols = ['Pedigree', 'From', 'To', 'Total']
+
+    LOG.info("Starting with writing mutation differentiation information to files")
+    mutation_df = mutation_df[mutation_df_cols]
+    total_mutation_df = total_mutation_df[total_mutations_cols]
+    mutation_df.to_csv(outdir / FULL_OUT)
+
+    total_mutation_df.to_csv(outdir / SUMMARY_OUT)
+
+    if distance_file is not None:
+        # read the distance file
+        LOG.info("Started with summarising and writing meiosis differentiation rates to file")
+        distance_dict = read_distance_file(distance_file)
+        write_differentiation_rates(mutation_dict, distance_dict, outdir / DIFFERENTIATION_OUT)
+
+    if include_predict_file:
+        predict_text_list = [f"sample,{','.join(markers)}"]
+        for pedigree_list in predict_pedigrees_list:
+            for sample_list in pedigree_list:
+                predict_text_list.append(','.join(list(map(str, sample_list))))
+        with open(outdir / PREDICT_OUT, "w") as f:
+            f.write('\n'.join(predict_text_list))
+
+    LOG.info("Finished calculating differentiation rates.")
+
 
 
 if __name__ == '__main__':

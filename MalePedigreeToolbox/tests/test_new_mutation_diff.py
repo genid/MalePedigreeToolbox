@@ -71,11 +71,10 @@ class TestMutationDiff(TestCase):
         l2 = mutation_diff.Allele([12.1, 13, 16])
         self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 0.0])
 
-    # def test_get_mutation_diff13(self):
-    #     # TODO ask what to do here
-    #     l1 = mutation_diff.Allele([12.1, 13.1, 16])
-    #     l2 = mutation_diff.Allele([13, 12.1, 16])
-    #     self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0])
+    def test_get_mutation_diff13(self):
+        l1 = mutation_diff.Allele([12.1, 13.1, 16])
+        l2 = mutation_diff.Allele([13, 12.1, 16])
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 0.0])
 
     def test_get_mutation_diff14(self):
         l1 = mutation_diff.Allele([12.1, 14, 16])
@@ -172,10 +171,10 @@ class TestMutationDiff(TestCase):
         l1 = mutation_diff.Allele([10, 11])
         l2 = mutation_diff.Allele([10, 11, 12])
         l3 = mutation_diff.Allele([10])
-        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 2.0])
-        self.assertTrue(mutation_diff.get_mutation_diff(l1, l3, 3) == [0.0, 1.0, 2.0])
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 0.0, 1.0])
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l3, 3) == [0.0, 1.0, 1.0])
 
     def test_get_mutation_diff33(self):
         l1 = mutation_diff.Allele([10.1, 11.1])
         l2 = mutation_diff.Allele([10, 11, 12])
-        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [0.0, 1.0, 2.0])
+        self.assertTrue(mutation_diff.get_mutation_diff(l1, l2, 3) == [1.0, 1.0, 1.0])
