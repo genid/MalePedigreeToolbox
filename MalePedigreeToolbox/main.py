@@ -218,7 +218,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
                              epilog="Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2021",)
     parser.add_argument("-ll", "--log_level",
                         help="Configure the logger for printing a certain level of information. 'basic': just simple "
-                             "'output', debug: all output including issues, 'silent': no output except warnings",
+                             "output, debug: all output including issues, 'silent': no output except warnings",
                         choices=["debug", "basic", "silent"], default='basic', metavar="STRING")
     parser.add_argument("-f", "--force", help="Force file/ directory creations regardless if they exist or not.",
                         action="store_true")  # the presence -f or --force will be checked before parcing

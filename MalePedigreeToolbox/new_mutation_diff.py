@@ -21,7 +21,8 @@ FULL_OUT: str = "full_out.csv"
 DIFFERENTIATION_OUT: str = "differentiation_out.csv"
 PREDICT_OUT: str = "predict_out.csv"
 
-SCORE_CACHE: Dict[FrozenSet, List[int]] = {}  # used to store already computed scores, speed up
+# used to store already computed mutations, speed up
+SCORE_CACHE: Dict[Tuple[FrozenSet, FrozenSet, int], List[int]] = {}
 
 
 class Allele:
@@ -49,6 +50,7 @@ class Allele:
         self._decimals.append(new_decimal)
 
     def get_equalizable_decimals(self, other_allele: "Allele"):
+        # decimals present in both alleles and more then one decimal
         equalizables = set()
         for decimal in other_allele._decimals:
             if decimal in self._decimals:
@@ -79,6 +81,10 @@ class Allele:
                 indexes.append(index)
         return indexes
 
+    @property
+    def components(self):
+        return self._components
+
     def __iter__(self):
         return iter(self._components)
 
@@ -98,7 +104,7 @@ class DifferenceMatrix:
     allele1: Allele
     allele2: Allele
 
-    def __init__(self, allele1, allele2, expected_size):
+    def __init__(self, allele1: Allele, allele2: Allele, expected_size):
         if len(allele1) == 0 or len(allele2) == 0:
             raise ValueError("Cannot compute distance against empty allele")
 
@@ -111,6 +117,7 @@ class DifferenceMatrix:
 
         self._rows = []
         self._create_matrix(expected_size)
+        self.score = None
 
     def _create_matrix(self, expected_size):
         # first fill the matrix based on the current alleles
@@ -126,60 +133,15 @@ class DifferenceMatrix:
                 matrix_row.append(difference)
             self._rows.append(matrix_row)
 
-        self._equalize_decimals()
-
         # in case both rows and columns need duplications we can already add some
         if self.nr_rows < expected_size:
             self._duplicate_simultanious(expected_size)
 
-    def _equalize_decimals(self):
-        equalizables = self.allele1.get_equalizable_decimals(self.allele2)
-        decimal_difference_dict = self.allele1.get_decimal_difference(self.allele2, equalizables)
-        # in case decimals are not matching assume that there are duplications
-        if len(decimal_difference_dict) == 0:
-            return
-        for decimal, difference in decimal_difference_dict.items():
-            if difference < 0:
-                indexes = self.allele1.get_indexes_with_decimal(decimal)
-                min_row_index = self._min_row(indexes)
-                self.allele1.duplicate_component(min_row_index)
-                self._rows.append(self._rows[min_row_index].copy())
-            else:
-                indexes = self.allele2.get_indexes_with_decimal(decimal)
-                min_col_index = self._min_column(indexes)
-                self.allele2.duplicate_component(min_col_index)
-
-                for row in self._rows:
-                    row.append(row[min_col_index])
-
-    def _min_row(self, indexes):
-        # row index with the lowest sum of values for a given number of indexes
-        min_sum = sum(self._rows[indexes[0]])
-        min_index = indexes[0]
-        for index in indexes[1:]:
-            row_sum = sum(self._rows[index])
-            if row_sum > min_sum:
-                continue
-            min_sum = row_sum
-            min_index = index
-        return min_index
-
-    def _min_column(self, indexes):
-        # column index with the lowest sum of values
-        min_sum = sum([row[indexes[0]] for index, row in enumerate(self._rows)])
-        min_index = indexes[0]
-        for index in indexes[1:]:
-            col_values = [row[index] for index, row in enumerate(self._rows)]
-            col_sum = sum(col_values)
-            if col_sum > min_sum:
-                continue
-            min_sum = col_sum
-            min_index = index
-        return min_index
-
     def _duplicate_simultanious(self, expected_size):
+        self._equalize_decimals((expected_size - self.nr_rows, expected_size - self.nr_rows))
         for _ in range(expected_size - self.nr_rows):
-            rindex, cindex = self._get_minimum_coordinate()
+            rindex, cindex = self._min_row(list(range(self.nr_rows))), self._min_column(list(range(self.nr_columns)))
+            print(rindex, cindex)
             self._rows.append(self._rows[rindex].copy())
             self.allele1.duplicate_component(rindex)
             self.allele2.duplicate_component(cindex)
@@ -197,48 +159,117 @@ class DifferenceMatrix:
                     lowest_coordinate = (rindex, cindex)
         return lowest_coordinate
 
+    def _equalize_decimals(self, max_changes: Tuple[int, int] = None):
+        # equalize the differences in decimals for both alleles
+        # max changes is the maximum changes for each allele
+        equalizables = self.allele1.get_equalizable_decimals(self.allele2)
+        decimal_difference_dict = self.allele1.get_decimal_difference(self.allele2, equalizables)
+        if len(decimal_difference_dict) == 0:
+            return
+
+        total_changes = [0, 0]
+        # make sure values get added to the first allele first in order to not violate the allele length assumption
+        decimal_difference_dict = {key: value for key, value in sorted(decimal_difference_dict.items(), key=lambda x: x[1])}
+        for decimal, difference in decimal_difference_dict.items():
+            # for each difference
+            for _ in range(abs(difference)):
+                if difference < 0 and (max_changes is None or max_changes[0] > total_changes[0]):
+                    indexes = self.allele1.get_indexes_with_decimal(decimal)
+                    min_row_index = self._min_row(indexes)
+                    self.allele1.duplicate_component(min_row_index)
+                    self._rows.append(self._rows[min_row_index].copy())
+                    total_changes[0] += 1
+                elif difference > 0 and (max_changes is None or max_changes[1] > total_changes[1]):
+                    indexes = self.allele2.get_indexes_with_decimal(decimal)
+                    min_col_index = self._min_column(indexes)
+                    self.allele2.duplicate_component(min_col_index)
+
+                    for row in self._rows:
+                        row.append(row[min_col_index])
+                    total_changes[1] += 1
+                else:
+                    # in case the max changes are reached
+                    return
+
+    def _min_row(self, indexes):
+        # row index with the lowest sum of values for a given number of indexes
+        min_sum = sum(self._rows[indexes[0]])
+        min_value = min(self._rows[indexes[0]])
+        min_index = indexes[0]
+        for index in indexes[1:]:
+            print(min_sum, min_value, min_index, index)
+            row_sum = sum(self._rows[index])
+            lowest_value = min(self._rows[index])
+            if row_sum > min_sum:
+                continue
+            elif row_sum == min_sum and lowest_value >= min_value:
+                continue
+            min_sum = row_sum
+            min_index = index
+            min_value = lowest_value
+        return min_index
+
+    def _min_column(self, indexes):
+        # column index with the lowest sum of values
+        min_sum = sum([row[indexes[0]] for row in self._rows])
+        min_value = min([row[indexes[0]] for row in self._rows])
+        min_index = indexes[0]
+        for index in indexes[1:]:
+            col_values = [row[index] for row in self._rows]
+            col_sum = sum(col_values)
+            lowest_value = min(col_values)
+            if col_sum > min_sum:
+                continue
+            elif col_sum == min_sum and lowest_value >= min_value:
+                continue
+            min_sum = col_sum
+            min_index = index
+            min_value = lowest_value
+        return min_index
+
     def _get_sorted_score_coordinates(self):
         coordinates = [(i, j) for j in range(self.nr_columns) for i in range(self.nr_rows)]
         return sorted(coordinates, key=lambda coord: self._rows[coord[0]][coord[1]])
 
-    def get_optimal_score(self):
-        scores = []
+    def calculate_mutations(self) -> List[int]:
+        mutations = []
         score_rows = []
         sorted_score_coordinates = self._get_sorted_score_coordinates()
 
-        # select the optimal scores
+        # select the optimal mutations
         covered_rows = set()
         covered_columns = set()
         score_index = 0
-        while len(scores) < len(self._rows[0]):
+        while len(mutations) < len(self._rows[0]):
             row, column = sorted_score_coordinates[score_index]
             score_index += 1
             if row in covered_rows or column in covered_columns:
                 continue
             covered_rows.add(row)
             covered_columns.add(column)
-            scores.append(self._rows[row][column])
+            mutations.append(self._rows[row][column])
             score_rows.append(row)
 
         # if there are more rows add allele components by duplicating existing components
         if len(covered_rows) < self.nr_rows:
-            more_scores, more_rows = self._duplicate_columns(covered_rows)
-            scores.extend(more_scores)
+            more_mutations, more_rows = self._duplicate_columns(covered_rows)
+            mutations.extend(more_mutations)
             score_rows.extend(more_rows)
 
-        # sort scores based on the order of the longest allele (allele1)
-        zipped_values = zip(scores, score_rows)
-        scores = [value[0] for value in sorted(zipped_values, key=lambda x: x[1])]
+        # sort mutations based on the order of the longest allele (allele1)
+        zipped_values = zip(mutations, score_rows)
+        mutations = [value[0] for value in sorted(zipped_values, key=lambda x: x[1])]
 
-        # remove the no matching penalty when returning scores
-        for index in range(len(scores)):
-            if scores[index] > self.NO_MATCHING_DECIMAL_PENALTY:
-                scores[index] -= self.NO_MATCHING_DECIMAL_PENALTY
-        return scores
+        # remove the no matching penalty when returning mutations
+        for index in range(len(mutations)):
+            if mutations[index] > self.NO_MATCHING_DECIMAL_PENALTY:
+                mutations[index] -= self.NO_MATCHING_DECIMAL_PENALTY
+        return mutations
 
     def _duplicate_columns(self, covered_rows):
+        # add components to allele2 (shortest allele) in order to equalize the lengths
         unused_rows = [i for i in range(len(self._rows)) if i not in covered_rows]
-        scores = []
+        mutations = []
         for row_index in unused_rows:
             min_value = self._rows[row_index][0]
             min_index = 0
@@ -246,13 +277,13 @@ class DifferenceMatrix:
                 if value < min_value:
                     min_value = value
                     min_index = col_index
-            # making matrix complete, should go at some point
+            # making matrix complete
             for row in self._rows:
                 row.append(row[min_index])
-            scores.append(min_value)
+            mutations.append(min_value)
             # make sure to add the duplication to the allele
             self.allele2.duplicate_component(min_index)
-        return scores, unused_rows
+        return mutations, unused_rows
 
     @property
     def nr_rows(self):
@@ -280,28 +311,54 @@ class DifferenceMatrix:
         return '\n'.join(final_str_list)
 
 
-def get_mutation_diff(
+def _get_mutation_diff(
     parent_allele: Allele,
     child_allele: Allele,
     expected_size: int
 ) -> List[float]:
-    cache_key = frozenset([frozenset(str(parent_allele)), frozenset(str(child_allele)), expected_size])
+    cache_key = (frozenset(parent_allele.components), frozenset(child_allele.components), expected_size)
     if cache_key in SCORE_CACHE:
         return SCORE_CACHE[cache_key]
 
     # will permanently modify alleles in order to include duplicates
     matrix = DifferenceMatrix(parent_allele, child_allele, expected_size)
-    score = matrix.get_optimal_score()
+    score = matrix.calculate_mutations()
 
     # alleles can change so make sure to remake key
-    cache_key = frozenset([frozenset(str(parent_allele)), frozenset(str(child_allele)), expected_size])
+    cache_key = (frozenset(parent_allele.components), frozenset(child_allele.components), expected_size)
     SCORE_CACHE[cache_key] = score
     return score
 
 
+def get_optimal_nr_mutations(all_allele_pairs: List[Tuple[List[float], List[float]]], expected_size):
+    best_mutations, best_total_mutations = _calculate_mutations(all_allele_pairs, expected_size)
+
+    allowed_over_duplications = 1
+    while True:
+        mutations, total_mutations = _calculate_mutations(all_allele_pairs, expected_size + allowed_over_duplications)
+        if total_mutations < best_total_mutations:
+            best_mutations = mutations
+            best_total_mutations = total_mutations
+        else:
+            break
+    return best_mutations
+        
+
+def _calculate_mutations(allele_pairs, expected_size):
+    mutations = []
+    total_mutations = 0
+    for pair1, pair2 in allele_pairs:
+        allele1 = Allele(pair1)
+        allele2 = Allele(pair2)
+        score = _get_mutation_diff(allele1, allele2, expected_size)
+        mutations.append(score)
+        total_mutations += sum(score)
+    return mutations, total_mutations
+
+
 @thread_termination.ThreadTerminable
 def write_differentiation_rates(
-    mutation_dict_list: List[Dict[str, Any]],
+    all_information_list: List[List[Any]],
     distance_dict: Dict[str, Dict[str, int]],
     outfile: "Path"
 ):
@@ -310,11 +367,11 @@ def write_differentiation_rates(
     covered_pairs = set()
     mutated_pairs = set()
     warned_pedigrees = set()  # make sure the log is less spammy
-    for dictionary in mutation_dict_list:
-        differentiated = dictionary["Total"] != 0
-        pedigree = dictionary["Pedigree"]
-        pair = dictionary["From"] + dictionary["To"]
-        reverse_pair = dictionary["To"] + dictionary["From"]
+    for lst in all_information_list:
+        differentiated = lst[-1] != 0
+        pedigree = lst[1]
+        pair = lst[2] + lst[3]
+        reverse_pair = lst[3] + lst[2]
 
         if pedigree not in distance_dict:
             if pedigree not in warned_pedigrees:
@@ -329,7 +386,7 @@ def write_differentiation_rates(
         elif reverse_pair in distance_dict[pedigree]:
             distance = distance_dict[pedigree][reverse_pair]
         else:
-            LOG.warning(f"Can not include pair {dictionary['To']}-{dictionary['From']} in the differentiation rate "
+            LOG.warning(f"Can not include pair {lst[3]}-{lst[2]} in the differentiation rate "
                         f"calculation since they are not present in the distance file.  This is likely caused by "
                         f"different names in the TGF files and alleles file.")
             continue
@@ -462,36 +519,31 @@ def run(
     if len(alleles_list_dict) == 0:
         LOG.error("Empty alleles file provided")
         raise utility.MalePedigreeToolboxError("Empty alleles file provided")
-    total_alleles_specified = len(alleles_list_dict[0]) - 3
 
     # pre-sort pedigree information for quick retrieval of information
     LOG.debug("Pre-sorting alleles information")
     grouped_alleles_dict, longest_allele_per_pedigree_marker = sort_pedigree_information(alleles_list_dict)
 
     LOG.info("Finished reading both input files")
-    markers = set(alleles_df.Marker)
+    markers = list(set(alleles_df.Marker))
 
     LOG.info(f"In total there are {len(markers)} markers being analysed.")
-    mutation_dict = []
-    total_mutation_dict = []
-    predict_pedigrees_list = []
+    all_information_list = []
+    total_mutation_dict = {}
+    predict_samples_dict = {}
+    longest_allele = 0
 
     prev_total = 0
     # make comparssons within each pedigree
     for index, (pedigree, pedigree_data) in enumerate(grouped_alleles_dict.items()):
         sample_names = list(pedigree_data.keys())
         sample_combs = sample_combinations(sample_names)
-        predict_samples_list = []
         LOG.info(f"Comparing {len(sample_combs)} allele combinations for pedigree {pedigree}")
-        # for each combination of samples
-        for sample1, sample2 in sample_combs:
-            sample1_data = pedigree_data[sample1]
-            sample2_data = pedigree_data[sample2]
-            total_mutations = 0
-            marker_values = {name: 0 for name in markers}
-            # for each individual marker
-            for marker in markers:
-                count_mutation = 0
+        for marker in markers:
+            all_allele_pairs = []
+            for sample1, sample2 in sample_combs:
+                sample1_data = pedigree_data[sample1]
+                sample2_data = pedigree_data[sample2]
 
                 if marker not in sample1_data or marker not in sample2_data:
                     LOG.warning(f"Marker ({marker}) is not present in {sample1} and {sample2}. The comparisson will be"
@@ -499,71 +551,71 @@ def run(
                     continue
                 marker_data1 = sample1_data[marker]
                 marker_data2 = sample2_data[marker]
-                mutations = get_mutation_diff(marker_data1, marker_data2,
-                                              longest_allele_per_pedigree_marker[pedigree][marker])
-                [mutations.append(0.0) for _ in range(total_alleles_specified - len(mutations))]
+                all_allele_pairs.append((marker_data1, marker_data2))
+            if marker not in longest_allele_per_pedigree_marker[pedigree]:
+                continue
+            optimal_mutations = get_optimal_nr_mutations(all_allele_pairs,
+                                                         longest_allele_per_pedigree_marker[pedigree][marker])
+            for mutations, (sample1, sample2) in zip(optimal_mutations, sample_combs):
+                if len(mutations) > longest_allele:
+                    longest_allele = len(mutations)
+                sum_mutations = sum(mutations)
+                all_information_list.append([len(all_information_list), pedigree, sample1, sample2, marker,
+                                            mutations, sum_mutations])
+                key = (pedigree, sample1, sample2)
+                if key not in total_mutation_dict:
+                    total_mutation_dict[key] = 0
+                    predict_samples_dict[key] = {}
+                total_mutation_dict[key] += sum_mutations
+                if include_predict_file:
+                    predict_samples_dict[key][marker] = sum_mutations
 
-                count_mutation += np.sum(mutations)
-                total_mutations += count_mutation
-                if marker in marker_values and include_predict_file:
-                    marker_values[marker] = count_mutation
-                mutation_dict.append({"Marker": marker, "Pedigree": pedigree, "From": sample1, "To": sample2,
-                                      **{f"Allele_{index + 1}": mutations[index] for index in
-                                         range(total_alleles_specified)}, "Total": count_mutation})
+        LOG.debug(f"Finished calculating differentiation for {index} out of {len(grouped_alleles_dict)}")
+        total, remainder = divmod(index / len(grouped_alleles_dict), 0.05)
 
-            # for predicting the generational distances
-            if include_predict_file:
-                predict_samples_list.append([f"{pedigree}_{sample1}_{sample2}",
-                                             *[marker_values[name] for name in markers]])
+        if total != prev_total:
+            LOG.info(f"Calculation progress: {round(5 * total)}%...")
+            prev_total = total
 
-            total_mutation_dict.append({"Pedigree": pedigree, "From": sample1, "To": sample2, "Total": total_mutations})
+    with open(outdir / FULL_OUT, "w") as f:
+        allele_header_section = ','.join([f"Allele_{index + 1}" for index in range(longest_allele)])
+        header = f"Pedigree,From,To,Marker,{allele_header_section},Total\n"
+        f.write(header)
+        for lst in all_information_list:
+            # mutations
+            lst[5] += [0 for _ in range(longest_allele - len(lst[5]))]
+            lst[5] = ','.join(map(str, lst[5]))
+            f.write(','.join(map(str, lst)) + "\n")
 
-            LOG.debug(f"Finished calculating differentiation for {index} out of {len(grouped_alleles_dict)}")
-            total, remainder = divmod(index / len(grouped_alleles_dict), 0.05)
-
-            if total != prev_total:
-                LOG.info(f"Calculation progress: {round(5 * total)}%...")
-                prev_total = total
-        if include_predict_file:
-            predict_pedigrees_list.append(predict_samples_list)
-
-    mutation_df = pd.DataFrame(mutation_dict)
-    total_mutation_df = pd.DataFrame(total_mutation_dict)
-
-    mutation_df_cols = ['Pedigree', 'From', 'To', 'Marker',
-                        *[f"Allele_{index + 1}" for index in range(total_alleles_specified)], 'Total']
-    total_mutations_cols = ['Pedigree', 'From', 'To', 'Total']
-
-    LOG.info("Starting with writing mutation differentiation information to files")
-    mutation_df = mutation_df[mutation_df_cols]
-    total_mutation_df = total_mutation_df[total_mutations_cols]
-    mutation_df.to_csv(outdir / FULL_OUT)
-
-    total_mutation_df.to_csv(outdir / SUMMARY_OUT)
+    with open(outdir / SUMMARY_OUT, "w") as f:
+        f.write(f",Pedigree,From,To,Total\n")
+        for index, (key, value) in enumerate(total_mutation_dict.items()):
+            pedigree, from_, to = key
+            f.write(f"{index},{pedigree},{from_},{to},{value}\n")
 
     if distance_file is not None:
         # read the distance file
         LOG.info("Started with summarising and writing meiosis differentiation rates to file")
         distance_dict = read_distance_file(distance_file)
-        write_differentiation_rates(mutation_dict, distance_dict, outdir / DIFFERENTIATION_OUT)
+        write_differentiation_rates(all_information_list, distance_dict, outdir / DIFFERENTIATION_OUT)
 
     if include_predict_file:
-        predict_text_list = [f"sample,{','.join(markers)}"]
-        for pedigree_list in predict_pedigrees_list:
-            for sample_list in pedigree_list:
-                predict_text_list.append(','.join(list(map(str, sample_list))))
         with open(outdir / PREDICT_OUT, "w") as f:
-            f.write('\n'.join(predict_text_list))
-
+            f.write(f"sample,{','.join(markers)}\n")
+            for key, marker_dict in predict_samples_dict.items():
+                f.write('_'.join(key) + ",")
+                f.write(','.join(str(marker_dict[marker]) if marker in marker_dict else "0" for marker in markers))
+                f.write("\n")
     LOG.info("Finished calculating differentiation rates.")
 
 
-
 if __name__ == '__main__':
-    l1 = Allele([12.1, 13.1, 16])
-    l2 = Allele([13, 12.1, 16])
+    l1 = [12, 13, 18]
+    l2 = [12, 13]
+    l1 = Allele(l1)
+    l2 = Allele(l2)
 
-    matrix_ = DifferenceMatrix(l2, l1, 3)
-    score_ = matrix_.get_optimal_score()
+    matrix_ = DifferenceMatrix(l1, l2, 4)
+    score_ = matrix_.calculate_mutations()
     print(matrix_)
     print(score_)
