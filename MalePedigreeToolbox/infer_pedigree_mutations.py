@@ -29,7 +29,7 @@ import pandas as pd
 # own imports
 from MalePedigreeToolbox import thread_termination
 from MalePedigreeToolbox import utility
-from MalePedigreeToolbox import mutation_diff
+from MalePedigreeToolbox import new_mutation_diff
 
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
@@ -112,7 +112,7 @@ def parse_tgf(
     tgf_text: str
 ) -> "PedigreeMarkerGraph":
     """Parse a tgf file into a PedigreeDict object"""
-    dict_inherit = PedigreeMarkerGraph()
+    marker_graph = PedigreeMarkerGraph()
     in_sample_mapping_section = True
     node_mapping = {}
     sample_mapping = {}
@@ -130,12 +130,12 @@ def parse_tgf(
                 if elem[1] not in node_mapping:
                     node_mapping[elem[1]] = PedigreeNode(elem[1])
                 child_node = node_mapping[elem[1]]
-                dict_inherit.add_connection(parent_node, child_node)
+                marker_graph.add_connection(parent_node, child_node)
             else:
                 sample_mapping[parent_node] = elem[1]
     for node, sample_name in sample_mapping.items():
-        dict_inherit.add_sample(node, sample_name)
-    return dict_inherit
+        marker_graph.add_sample(node, sample_name)
+    return marker_graph
 
 
 class FullPedgreeGraph:
@@ -209,6 +209,8 @@ class FullPedigreeNode:
         self.alleles = {}
 
     def add_allele(self, allele, marker):
+        if isinstance(allele, list):
+            allele = new_mutation_diff.Allele(allele)
         self.alleles[marker] = allele
 
     def allele_id(self):
@@ -232,14 +234,35 @@ class PedigreeMarkerGraph:
     Store a tgf file in a easily navigable object. Containing the graph stored in both directions for quick look ups.
     This object is meant to store allele information for one marker.
     """
+
+    id_node_mapping: Dict[str, "PedigreeNode"]
+
     def __init__(self):
         self.store = {}
         self.id_node_mapping = {}  # link id to node
         self.sample_node_mapping = {}  # link sample to node --> only when sample is present
         self.reverse_store = {}
         self.alleles = set()
+        self._longest_allele = 0
+
+    def check_alleles(self):
+        # check alleles based on the current named alleles and the best way these alleles can be distributed
+        name_node_mapping = {}
+        for id_, node in self.id_node_mapping.items():
+            if node.allele is not None:
+                name_node_mapping[id_] = node.allele.components.copy()
+        all_id_combinations = new_mutation_diff.sample_combinations(list(name_node_mapping.keys()))
+        _, optimal_alleles = new_mutation_diff.get_optimal_nr_mutations(all_id_combinations, name_node_mapping,
+                                                                        self._longest_allele)
+        # set all the optimal alleles
+        for id_ in optimal_alleles:
+            self.id_node_mapping[id_].set_allele(optimal_alleles[id_])
 
     def add_connection(self, parent_node: "PedigreeNode", child_node: "PedigreeNode"):
+        if parent_node.allele is not None and len(parent_node.allele) > self._longest_allele:
+            self._longest_allele = len(parent_node.allele)
+        if child_node.allele is not None and len(child_node.allele) > self._longest_allele:
+            self._longest_allele = len(child_node.allele)
         self.id_node_mapping[parent_node.id] = parent_node
         self.id_node_mapping[child_node.id] = child_node
         if parent_node in self.store:
@@ -259,9 +282,9 @@ class PedigreeMarkerGraph:
         node.set_sample(None)
         del self.sample_node_mapping[sample_name]
 
-    def add_allele(self, node: "PedigreeNode", allele):
+    def add_allele(self, node: "PedigreeNode", allele: Union[List[int], new_mutation_diff.Allele]):
         node.set_allele(allele)
-        self.alleles.add(allele)
+        self.alleles.add(node.allele)
 
     def total_included_nodes(self):
         # get all nodes that have an allele that is not None
@@ -316,6 +339,9 @@ class PedigreeMarkerGraph:
 
 class PedigreeNode:
     """tracks information for a node in the pedigree graph"""
+
+    allele: Union[new_mutation_diff.Allele, None]
+
     def __init__(self, id_):
         self.id = id_
         self.sample = None
@@ -324,8 +350,11 @@ class PedigreeNode:
     def set_sample(self, sample):
         self.sample = sample
 
-    def set_allele(self, allele):
-        self.allele = allele
+    def set_allele(self, allele: Union[List[int], new_mutation_diff.Allele]):
+        if isinstance(allele, list) or isinstance(allele, tuple):
+            self.allele = new_mutation_diff.Allele(allele)
+        else:
+            self.allele = allele
 
     def __repr__(self):
         return f"<id: {self.id}, sample:{self.sample}, allele:{self.allele}>"
@@ -405,6 +434,10 @@ def infer_pedigree_mutations(
             # set the known alleles in the graph
             node = pedigree_marker_graph.get_node_by_sample(sample_name)
             pedigree_marker_graph.add_allele(node, allele)
+
+        # assign the optimal alleles based on the currently known information in the pedigree
+        pedigree_marker_graph.check_alleles()
+
         if full_pedigree_graph is None:
             full_pedigree_graph = FullPedgreeGraph(pedigree_marker_graph)
 
@@ -475,7 +508,7 @@ def estimate_allele_changes(
 @thread_termination.ThreadTerminable
 def estimate_unknown_alleles(
     pedigree_marker_graph: "PedigreeMarkerGraph",
-    needed_allele_changes: Dict["PedigreeNode", Dict[List[int], int]]
+    needed_allele_changes: Dict["PedigreeNode", Dict[new_mutation_diff.Allele, int]]
 ):
     """Estimate allelels based on the number of estimated allele changes for all possible alleles for a node without
     known allele
@@ -512,7 +545,7 @@ def estimate_unknown_alleles(
 @thread_termination.ThreadTerminable
 def set_alleles(
     pedigree_marker_graph: "PedigreeMarkerGraph",
-    needed_allele_changes: Dict["PedigreeNode", Dict[List[int], int]],
+    needed_allele_changes: Dict["PedigreeNode", Dict[new_mutation_diff.Allele, int]],
     base_node: "PedigreeNode",
     expected_allele_number: int
 ) -> int:
@@ -535,16 +568,16 @@ def set_alleles(
             for child_node in child_nodes:
                 if child_node not in needed_allele_changes:
                     if child_node.allele is not None:
-                        difference = sum(mutation_diff.get_mutation_diff(parent_allele, child_node.allele,
-                                                                         expected_allele_number))
+                        difference = sum(new_mutation_diff.get_mutation_diff(parent_allele, child_node.allele,
+                                                                             expected_allele_number))
                         score += difference
                     continue
                 id_entry_child = needed_allele_changes[child_node]
                 path_scores = {}
                 all_zero = True  # if this remains true there is no difference from staying on the current allele
                 for child_allele in id_entry_child:
-                    difference = sum(mutation_diff.get_mutation_diff(parent_allele, child_allele,
-                                                                     expected_allele_number))
+                    difference = sum(new_mutation_diff.get_mutation_diff(parent_allele, child_allele,
+                                                                         expected_allele_number))
                     # number of mutations that are avoided choosing this one
                     avoided_mutations = id_entry_child[child_allele] - difference
                     if avoided_mutations != 0:
@@ -589,7 +622,7 @@ def plot_pedigree(
     colors = COLORS.copy()
 
     next_nodes = [pedigree_marker_graph.get_base_node()]
-    allele_color_mapping = {next_nodes[0].allele: "white"}
+    allele_color_mapping = {tuple(next_nodes[0].allele.components): "white"}
     expected_allele_number = longest_allele_length(pedigree_marker_graph)
 
     # track this in order to draw edges the same color that could have had a certain mutation as well
@@ -600,7 +633,7 @@ def plot_pedigree(
         new_mutated_parents = []
         # add nodes
         for parent_node in next_nodes:
-            color = get_allele_color(colors, allele_color_mapping, parent_node.allele)
+            color = get_allele_color(colors, allele_color_mapping, tuple(parent_node.allele.components))
             if parent_node.sample is not None:
                 dot.node(parent_node.id, parent_node.sample, shape='box', style='filled', fillcolor=color)
             else:
@@ -608,16 +641,16 @@ def plot_pedigree(
             child_nodes = [node for node in pedigree_marker_graph.get_children(parent_node) if node.allele is not None]
             # add edges
             for child_node in child_nodes:
-                if child_node.allele != parent_node.allele:
-                    edge_color = get_edge_color(colors, allele_color_mapping, child_node.allele)
+                if child_node.allele.components != parent_node.allele.components:
+                    edge_color = get_edge_color(colors, allele_color_mapping, tuple(child_node.allele.components))
 
-                    distance = sum(mutation_diff.get_mutation_diff(parent_node.allele, child_node.allele,
-                                                                   expected_allele_number))
+                    distance = sum(new_mutation_diff.get_mutation_diff(parent_node.allele, child_node.allele,
+                                                                       expected_allele_number))
                     new_mutated_parents.append(child_node)
                     total_mutations += distance
                     dot.edge(parent_node.id, child_node.id, label=str(int(distance)), color=edge_color)
                 elif parent_node in needed_allele_changes and len(needed_allele_changes[parent_node]) == 1:
-                    edge_color = get_edge_color(colors, allele_color_mapping, parent_node.allele)
+                    edge_color = get_edge_color(colors, allele_color_mapping, tuple(parent_node.allele.components))
                     if parent_node in mutated_parents:
                         dot.edge(parent_node.id, child_node.id, color=edge_color)
                         new_mutated_parents.append(child_node)
@@ -707,7 +740,7 @@ def plot_full_pedigree(
                 edge_changes = []
                 for marker, child_allele in child_node.alleles.items():
                     parent_allele = parent_alleles_dict[marker]
-                    if child_allele != parent_allele and child_allele is not None:
+                    if child_allele.components != parent_allele.components and child_allele is not None:
                         edge_changes.append(f"{marker},{format_allele(parent_allele)},{format_allele(child_allele)}")
 
                 # dont show label if no mutations
@@ -744,10 +777,8 @@ def plot_full_pedigree(
 
 
 def format_allele(
-    allele: List[int]
+    allele: Tuple[float]
 ) -> str:
-    allele = np.array(allele)
-    allele = allele[allele != 0]
     allele_string_list = []
     for number in allele:
         number_decimal = str(number).split(".")

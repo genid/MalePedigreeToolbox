@@ -21,13 +21,10 @@ FULL_OUT: str = "full_out.csv"
 DIFFERENTIATION_OUT: str = "differentiation_out.csv"
 PREDICT_OUT: str = "predict_out.csv"
 
-# used to store already computed mutations, speed up
-SCORE_CACHE: Dict[Tuple[FrozenSet, FrozenSet, int], List[int]] = {}
-
 
 class Allele:
 
-    def __init__(self, components: List[float]):
+    def __init__(self, components: Union[List[float], Tuple[float]]):
         self._components = [comp for comp in components if comp != 0]
         if len(self._components) == 0:
             self._components = [0]
@@ -97,6 +94,14 @@ class Allele:
     def __len__(self):
         return len(self._components)
 
+    def __hash__(self):
+        return hash(tuple(self.components))
+
+    def __eq__(self, other):
+        if not isinstance(other, Allele):
+            raise ValueError("Only compare alleles")
+        return self.components == other.components
+
 
 class DifferenceMatrix:
     NO_MATCHING_DECIMAL_PENALTY: int = 1000
@@ -114,12 +119,16 @@ class DifferenceMatrix:
             allele2 = temp
         self.allele1 = allele1
         self.allele2 = allele2
+        self.expected_size = expected_size
 
-        self._rows = []
-        self._create_matrix(expected_size)
-        self.score = None
+        # in case of equal alleles we already know the score
+        if self.allele1 != self.allele2:
 
-    def _create_matrix(self, expected_size):
+            self._rows = []
+            self._create_matrix()
+            self.score = None
+
+    def _create_matrix(self):
         # first fill the matrix based on the current alleles
         for allele_component1 in self.allele1:
             matrix_row = []
@@ -137,8 +146,8 @@ class DifferenceMatrix:
         if len(self.allele1) != len(self.allele2):
             self._equalize_allele_lengths()
         # make alleles to the expected size
-        if self.nr_rows < expected_size:
-            self._duplicate_simultanious(expected_size)
+        if self.nr_rows < self.expected_size:
+            self._duplicate_simultanious()
 
     def _equalize_allele_lengths(self):
         # find the current optimal path and calculate optimal duplication depending on remaining open components
@@ -181,11 +190,11 @@ class DifferenceMatrix:
             # make sure to add the duplication to the allele
             self.allele2.duplicate_component(min_index)
 
-    def _duplicate_simultanious(self, expected_size):
+    def _duplicate_simultanious(self):
         # duplicate both alleles when both of them are equally to short of the expected size
-        self._equalize_decimals((expected_size - self.nr_rows, expected_size - self.nr_rows))
+        self._equalize_decimals((self.expected_size - self.nr_rows, self.expected_size - self.nr_rows))
 
-        for _ in range(expected_size - self.nr_rows):
+        for _ in range(self.expected_size - self.nr_rows):
             rindex, cindex = self._min_row(list(range(self.nr_rows))), self._min_column(list(range(self.nr_columns)))
             self._rows.append(self._rows[rindex].copy())
             self.allele1.duplicate_component(rindex)
@@ -263,6 +272,8 @@ class DifferenceMatrix:
         return sorted(coordinates, key=lambda coord: self._rows[coord[0]][coord[1]])
 
     def calculate_mutations(self) -> List[int]:
+        if self.allele1 == self.allele2:
+            return [0 for _ in range(self.expected_size)]
         mutations = []
         score_rows = []
         sorted_score_coordinates = self._get_sorted_score_coordinates()
@@ -322,17 +333,9 @@ def get_mutation_diff(
     child_allele: Allele,
     expected_size: int
 ) -> List[float]:
-    cache_key = (frozenset(parent_allele.components), frozenset(child_allele.components), expected_size)
-    # if cache_key in SCORE_CACHE:
-    #     return SCORE_CACHE[cache_key]
-
     # will permanently modify alleles in order to include duplicates
     matrix = DifferenceMatrix(parent_allele, child_allele, expected_size)
     score = matrix.calculate_mutations()
-
-    # alleles can change so make sure to remake key
-    cache_key = (frozenset(parent_allele.components), frozenset(child_allele.components), expected_size)
-    SCORE_CACHE[cache_key] = score
     return score
 
 
@@ -340,26 +343,21 @@ def get_optimal_nr_mutations(
     all_allele_pairs: List[Tuple[str, str]],
     allele_name_mapping: Dict[str, List[float]],
     expected_size: int,
-    reset_cache: bool = True
-) -> List[List[float]]:
-
-    if reset_cache:
-        # if you are unsure, reset it. Since optimal scores depend on context of other alleles when testing unrelated
-        # alleles scores might be different
-        global SCORE_CACHE
-        SCORE_CACHE = {}
-    best_mutations, best_total_mutations = _calculate_mutations(all_allele_pairs, allele_name_mapping, expected_size)
+) -> Tuple[List[List[float]], Dict[str, Allele]]:
+    best_mutations, best_total_mutations, best_allele_mapping = \
+        _calculate_mutations(all_allele_pairs, allele_name_mapping, expected_size)
 
     allowed_over_duplications = 1
     while True:
-        mutations, total_mutations = _calculate_mutations(all_allele_pairs, allele_name_mapping,
-                                                          expected_size + allowed_over_duplications)
+        mutations, total_mutations, allele_mapping = \
+            _calculate_mutations(all_allele_pairs, allele_name_mapping, expected_size + allowed_over_duplications)
         if total_mutations < best_total_mutations:
             best_mutations = mutations
             best_total_mutations = total_mutations
+            best_allele_mapping = allele_mapping
         else:
             break
-    return best_mutations
+    return best_mutations, best_allele_mapping
         
 
 def _calculate_mutations(
@@ -383,7 +381,7 @@ def _calculate_mutations(
         score = get_mutation_diff(allele1, allele2, expected_size)
         mutations.append(score)
         total_mutations += sum(score)
-    return mutations, total_mutations
+    return mutations, total_mutations, allele_mapping
 
 
 @thread_termination.ThreadTerminable
@@ -587,8 +585,8 @@ def run(
                 pair_name_mapping[sample2] = marker_data2
             if marker not in longest_allele_per_pedigree_marker[pedigree]:
                 continue
-            optimal_mutations = get_optimal_nr_mutations(all_allele_pairs, pair_name_mapping,
-                                                         longest_allele_per_pedigree_marker[pedigree][marker])
+            optimal_mutations, _ = get_optimal_nr_mutations(all_allele_pairs, pair_name_mapping,
+                                                            longest_allele_per_pedigree_marker[pedigree][marker])
             for mutations, (sample1, sample2) in zip(optimal_mutations, sample_combs):
                 if len(mutations) > longest_allele:
                     longest_allele = len(mutations)
