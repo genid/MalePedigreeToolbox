@@ -133,31 +133,65 @@ class DifferenceMatrix:
                 matrix_row.append(difference)
             self._rows.append(matrix_row)
 
-        # in case both rows and columns need duplications we can already add some
+        # equalize the lengths of both alleles
+        if len(self.allele1) != len(self.allele2):
+            self._equalize_allele_lengths()
+        # make alleles to the expected size
         if self.nr_rows < expected_size:
             self._duplicate_simultanious(expected_size)
 
+    def _equalize_allele_lengths(self):
+        # find the current optimal path and calculate optimal duplication depending on remaining open components
+
+        # prioritize duplication of imbalanced decimals
+        self._equalize_decimals((0, len(self.allele1) - len(self.allele2)))
+        if len(self.allele1) == len(self.allele2):
+            return
+
+        # if still a difference duplicate such that the unaligned allele gets the optimal match
+        sorted_score_coordinates = self._get_sorted_score_coordinates()
+
+        # select the optimal mutations
+        covered_rows = set()
+        covered_columns = set()
+        score_index = 0
+        while len(covered_rows) < len(self._rows[0]):
+            row, column = sorted_score_coordinates[score_index]
+            score_index += 1
+            if row in covered_rows or column in covered_columns:
+                continue
+            covered_rows.add(row)
+            covered_columns.add(column)
+
+        self._duplicate_in_allele2(covered_rows)
+
+    def _duplicate_in_allele2(self, covered_rows):
+        # add components to allele2 (shortest allele) in order to equalize the lengths
+        unused_rows = [i for i in range(len(self._rows)) if i not in covered_rows]
+        for row_index in unused_rows:
+            min_value = self._rows[row_index][0]
+            min_index = 0
+            for col_index, value in enumerate(self._rows[row_index]):
+                if value < min_value:
+                    min_value = value
+                    min_index = col_index
+            # making matrix complete
+            for row in self._rows:
+                row.append(row[min_index])
+            # make sure to add the duplication to the allele
+            self.allele2.duplicate_component(min_index)
+
     def _duplicate_simultanious(self, expected_size):
+        # duplicate both alleles when both of them are equally to short of the expected size
         self._equalize_decimals((expected_size - self.nr_rows, expected_size - self.nr_rows))
+
         for _ in range(expected_size - self.nr_rows):
             rindex, cindex = self._min_row(list(range(self.nr_rows))), self._min_column(list(range(self.nr_columns)))
-            print(rindex, cindex)
             self._rows.append(self._rows[rindex].copy())
             self.allele1.duplicate_component(rindex)
             self.allele2.duplicate_component(cindex)
             for row in self._rows:
                 row.append(row[cindex])
-
-    def _get_minimum_coordinate(self):
-        # get the coordinate with the minum value in the matrix
-        lowest_value = self._rows[0][0]
-        lowest_coordinate = (0, 0)
-        for rindex, row in enumerate(self._rows):
-            for cindex, value in enumerate(row):
-                if value < lowest_value:
-                    lowest_value = value
-                    lowest_coordinate = (rindex, cindex)
-        return lowest_coordinate
 
     def _equalize_decimals(self, max_changes: Tuple[int, int] = None):
         # equalize the differences in decimals for both alleles
@@ -168,8 +202,6 @@ class DifferenceMatrix:
             return
 
         total_changes = [0, 0]
-        # make sure values get added to the first allele first in order to not violate the allele length assumption
-        decimal_difference_dict = {key: value for key, value in sorted(decimal_difference_dict.items(), key=lambda x: x[1])}
         for decimal, difference in decimal_difference_dict.items():
             # for each difference
             for _ in range(abs(difference)):
@@ -187,7 +219,7 @@ class DifferenceMatrix:
                     for row in self._rows:
                         row.append(row[min_col_index])
                     total_changes[1] += 1
-                else:
+                elif total_changes[0] >= max_changes[0] and total_changes[1] >= max_changes[1]:
                     # in case the max changes are reached
                     return
 
@@ -197,7 +229,6 @@ class DifferenceMatrix:
         min_value = min(self._rows[indexes[0]])
         min_index = indexes[0]
         for index in indexes[1:]:
-            print(min_sum, min_value, min_index, index)
             row_sum = sum(self._rows[index])
             lowest_value = min(self._rows[index])
             if row_sum > min_sum:
@@ -250,12 +281,6 @@ class DifferenceMatrix:
             mutations.append(self._rows[row][column])
             score_rows.append(row)
 
-        # if there are more rows add allele components by duplicating existing components
-        if len(covered_rows) < self.nr_rows:
-            more_mutations, more_rows = self._duplicate_columns(covered_rows)
-            mutations.extend(more_mutations)
-            score_rows.extend(more_rows)
-
         # sort mutations based on the order of the longest allele (allele1)
         zipped_values = zip(mutations, score_rows)
         mutations = [value[0] for value in sorted(zipped_values, key=lambda x: x[1])]
@@ -265,25 +290,6 @@ class DifferenceMatrix:
             if mutations[index] > self.NO_MATCHING_DECIMAL_PENALTY:
                 mutations[index] -= self.NO_MATCHING_DECIMAL_PENALTY
         return mutations
-
-    def _duplicate_columns(self, covered_rows):
-        # add components to allele2 (shortest allele) in order to equalize the lengths
-        unused_rows = [i for i in range(len(self._rows)) if i not in covered_rows]
-        mutations = []
-        for row_index in unused_rows:
-            min_value = self._rows[row_index][0]
-            min_index = 0
-            for col_index, value in enumerate(self._rows[row_index]):
-                if value < min_value:
-                    min_value = value
-                    min_index = col_index
-            # making matrix complete
-            for row in self._rows:
-                row.append(row[min_index])
-            mutations.append(min_value)
-            # make sure to add the duplication to the allele
-            self.allele2.duplicate_component(min_index)
-        return mutations, unused_rows
 
     @property
     def nr_rows(self):
@@ -311,14 +317,14 @@ class DifferenceMatrix:
         return '\n'.join(final_str_list)
 
 
-def _get_mutation_diff(
+def get_mutation_diff(
     parent_allele: Allele,
     child_allele: Allele,
     expected_size: int
 ) -> List[float]:
     cache_key = (frozenset(parent_allele.components), frozenset(child_allele.components), expected_size)
-    if cache_key in SCORE_CACHE:
-        return SCORE_CACHE[cache_key]
+    # if cache_key in SCORE_CACHE:
+    #     return SCORE_CACHE[cache_key]
 
     # will permanently modify alleles in order to include duplicates
     matrix = DifferenceMatrix(parent_allele, child_allele, expected_size)
@@ -330,12 +336,24 @@ def _get_mutation_diff(
     return score
 
 
-def get_optimal_nr_mutations(all_allele_pairs: List[Tuple[List[float], List[float]]], expected_size):
-    best_mutations, best_total_mutations = _calculate_mutations(all_allele_pairs, expected_size)
+def get_optimal_nr_mutations(
+    all_allele_pairs: List[Tuple[str, str]],
+    allele_name_mapping: Dict[str, List[float]],
+    expected_size: int,
+    reset_cache: bool = True
+) -> List[List[float]]:
+
+    if reset_cache:
+        # if you are unsure, reset it. Since optimal scores depend on context of other alleles when testing unrelated
+        # alleles scores might be different
+        global SCORE_CACHE
+        SCORE_CACHE = {}
+    best_mutations, best_total_mutations = _calculate_mutations(all_allele_pairs, allele_name_mapping, expected_size)
 
     allowed_over_duplications = 1
     while True:
-        mutations, total_mutations = _calculate_mutations(all_allele_pairs, expected_size + allowed_over_duplications)
+        mutations, total_mutations = _calculate_mutations(all_allele_pairs, allele_name_mapping,
+                                                          expected_size + allowed_over_duplications)
         if total_mutations < best_total_mutations:
             best_mutations = mutations
             best_total_mutations = total_mutations
@@ -344,13 +362,25 @@ def get_optimal_nr_mutations(all_allele_pairs: List[Tuple[List[float], List[floa
     return best_mutations
         
 
-def _calculate_mutations(allele_pairs, expected_size):
+def _calculate_mutations(
+    allele_pairs: List[Tuple[str, str]],
+    allele_name_mapping: Dict[str, List[float]],
+    expected_size: int
+):
     mutations = []
     total_mutations = 0
-    for pair1, pair2 in allele_pairs:
-        allele1 = Allele(pair1)
-        allele2 = Allele(pair2)
-        score = _get_mutation_diff(allele1, allele2, expected_size)
+    allele_mapping = {}
+
+    # create Allele objects for every allele defined as a List of floats, alleles can be modified when calculating which
+    # is important information for other comparissons
+    for name1, name2 in allele_pairs:
+        allele_mapping[name1] = Allele(allele_name_mapping[name1])
+        allele_mapping[name2] = Allele(allele_name_mapping[name2])
+
+    for name1, name2 in allele_pairs:
+        allele1 = allele_mapping[name1]
+        allele2 = allele_mapping[name2]
+        score = get_mutation_diff(allele1, allele2, expected_size)
         mutations.append(score)
         total_mutations += sum(score)
     return mutations, total_mutations
@@ -541,6 +571,7 @@ def run(
         LOG.info(f"Comparing {len(sample_combs)} allele combinations for pedigree {pedigree}")
         for marker in markers:
             all_allele_pairs = []
+            pair_name_mapping = {}
             for sample1, sample2 in sample_combs:
                 sample1_data = pedigree_data[sample1]
                 sample2_data = pedigree_data[sample2]
@@ -551,10 +582,12 @@ def run(
                     continue
                 marker_data1 = sample1_data[marker]
                 marker_data2 = sample2_data[marker]
-                all_allele_pairs.append((marker_data1, marker_data2))
+                all_allele_pairs.append((sample1, sample2))
+                pair_name_mapping[sample1] = marker_data1
+                pair_name_mapping[sample2] = marker_data2
             if marker not in longest_allele_per_pedigree_marker[pedigree]:
                 continue
-            optimal_mutations = get_optimal_nr_mutations(all_allele_pairs,
+            optimal_mutations = get_optimal_nr_mutations(all_allele_pairs, pair_name_mapping,
                                                          longest_allele_per_pedigree_marker[pedigree][marker])
             for mutations, (sample1, sample2) in zip(optimal_mutations, sample_combs):
                 if len(mutations) > longest_allele:
@@ -610,12 +643,18 @@ def run(
 
 
 if __name__ == '__main__':
-    l1 = [12, 13, 18]
-    l2 = [12, 13]
-    l1 = Allele(l1)
-    l2 = Allele(l2)
+    # l1 = [10, 11.1, 11, 12]
+    # l2 = [10, 11.1, 12.1, 13.1]
+    # l1 = Allele(l1)
+    # l2 = Allele(l2)
+    #
+    # matrix_ = DifferenceMatrix(l1, l2, 4)
+    # score_ = matrix_.calculate_mutations()
+    # print(matrix_)
+    # print(score_)
 
-    matrix_ = DifferenceMatrix(l1, l2, 4)
-    score_ = matrix_.calculate_mutations()
-    print(matrix_)
-    print(score_)
+    l1 = [10, 11]
+    l2 = [10, 11, 12]
+    l3 = [10]
+
+    print(get_optimal_nr_mutations([("l1", "l2"), ("l1", "l3")], {"l1": [10, 11], "l2": [10, 11, 12], "l3": [10]},  3))
