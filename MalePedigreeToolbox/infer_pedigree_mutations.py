@@ -641,7 +641,7 @@ def plot_pedigree(
             child_nodes = [node for node in pedigree_marker_graph.get_children(parent_node) if node.allele is not None]
             # add edges
             for child_node in child_nodes:
-                if child_node.allele.components != parent_node.allele.components:
+                if child_node.allele != parent_node.allele:
                     edge_color = get_edge_color(colors, allele_color_mapping, tuple(child_node.allele.components))
 
                     distance = sum(new_mutation_diff.get_mutation_diff(parent_node.allele, child_node.allele,
@@ -740,7 +740,7 @@ def plot_full_pedigree(
                 edge_changes = []
                 for marker, child_allele in child_node.alleles.items():
                     parent_allele = parent_alleles_dict[marker]
-                    if child_allele.components != parent_allele.components and child_allele is not None:
+                    if child_allele is not None and child_allele != parent_allele:
                         edge_changes.append(f"{marker},{format_allele(parent_allele)},{format_allele(child_allele)}")
 
                 # dont show label if no mutations
@@ -777,8 +777,10 @@ def plot_full_pedigree(
 
 
 def format_allele(
-    allele: Tuple[float]
+    allele: Union[Tuple[float], new_mutation_diff.Allele]
 ) -> str:
+    if isinstance(allele, new_mutation_diff.Allele):
+        allele = allele.components
     allele_string_list = []
     for number in allele:
         number_decimal = str(number).split(".")

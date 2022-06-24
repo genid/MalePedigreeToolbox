@@ -1,4 +1,4 @@
-from typing import Union, Tuple, List, Dict, FrozenSet, Any, TYPE_CHECKING, Set
+from typing import Union, Tuple, List, Dict, Any, TYPE_CHECKING, Set
 from math import isclose, ceil
 from collections import defaultdict
 import pandas as pd
@@ -43,7 +43,7 @@ class Allele:
     def duplicate_component(self, index):
         new_value = self._components[index]
         self._components.append(new_value)
-        new_decimal = self._decimals[index]
+        new_decimal = self._get_decimal(new_value)
         self._decimals.append(new_decimal)
 
     def get_equalizable_decimals(self, other_allele: "Allele"):
@@ -67,8 +67,7 @@ class Allele:
             if decimal not in equalizables:
                 continue
             decimal_count_dict[decimal] -= 1
-            if decimal_count_dict[decimal] == 0:
-                del decimal_count_dict[decimal]
+        decimal_count_dict = {key: value for key, value in decimal_count_dict.items() if value != 0}
         return decimal_count_dict
 
     def get_indexes_with_decimal(self, wanted_decimal):
@@ -80,16 +79,16 @@ class Allele:
 
     @property
     def components(self):
-        return self._components
+        return sorted(self._components)
 
     def __iter__(self):
         return iter(self._components)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int):
         return self._components[item]
 
     def __str__(self):
-        return str(self._components)
+        return str(sorted(self._components))
 
     def __len__(self):
         return len(self._components)
@@ -97,10 +96,10 @@ class Allele:
     def __hash__(self):
         return hash(tuple(self.components))
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Allele"):
         if not isinstance(other, Allele):
             raise ValueError("Only compare alleles")
-        return self.components == other.components
+        return sorted(self.components) == sorted(other.components)
 
 
 class DifferenceMatrix:
@@ -196,6 +195,11 @@ class DifferenceMatrix:
 
         for _ in range(self.expected_size - self.nr_rows):
             rindex, cindex = self._min_row(list(range(self.nr_rows))), self._min_column(list(range(self.nr_columns)))
+
+            # if we add the same allele resulting in an addition of 0 score, dont add it since there are other
+            # possibilities
+            if self.allele1[rindex] == self.allele2[cindex]:
+                continue
             self._rows.append(self._rows[rindex].copy())
             self.allele1.duplicate_component(rindex)
             self.allele2.duplicate_component(cindex)
@@ -300,6 +304,9 @@ class DifferenceMatrix:
         for index in range(len(mutations)):
             if mutations[index] > self.NO_MATCHING_DECIMAL_PENALTY:
                 mutations[index] -= self.NO_MATCHING_DECIMAL_PENALTY
+        # add 0's at the end in case of ambigious duplications that are left out
+        for _ in range(self.expected_size - len(mutations)):
+            mutations.append(0)
         return mutations
 
     @property
@@ -641,18 +648,18 @@ def run(
 
 
 if __name__ == '__main__':
-    # l1 = [10, 11.1, 11, 12]
-    # l2 = [10, 11.1, 12.1, 13.1]
-    # l1 = Allele(l1)
-    # l2 = Allele(l2)
+    l2 = [48, 66.1]
+    l1 = [48, 66.1, 67.1]
+    l1 = Allele(l1)
+    l2 = Allele(l2)
+
+    matrix_ = DifferenceMatrix(l1, l2, 4)
+    score_ = matrix_.calculate_mutations()
+    print(matrix_)
+    print(score_)
+
+    # l1 = [10, 11]
+    # l2 = [10, 11, 12]
+    # l3 = [10]
     #
-    # matrix_ = DifferenceMatrix(l1, l2, 4)
-    # score_ = matrix_.calculate_mutations()
-    # print(matrix_)
-    # print(score_)
-
-    l1 = [10, 11]
-    l2 = [10, 11, 12]
-    l3 = [10]
-
-    print(get_optimal_nr_mutations([("l1", "l2"), ("l1", "l3")], {"l1": [10, 11], "l2": [10, 11, 12], "l3": [10]},  3))
+    # print(get_optimal_nr_mutations([("l1", "l2"), ("l1", "l3")], {"l1": [10, 11], "l2": [10, 11, 12], "l3": [10]},  3))
