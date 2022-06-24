@@ -253,7 +253,7 @@ class PedigreeMarkerGraph:
                 name_node_mapping[id_] = node.allele.components.copy()
         all_id_combinations = mutation_diff.sample_combinations(list(name_node_mapping.keys()))
         _, optimal_alleles = mutation_diff.get_optimal_nr_mutations(all_id_combinations, name_node_mapping,
-                                                                        self._longest_allele)
+                                                                    self._longest_allele)
         # set all the optimal alleles
         for id_ in optimal_alleles:
             self.id_node_mapping[id_].set_allele(optimal_alleles[id_])
@@ -569,7 +569,7 @@ def set_alleles(
                 if child_node not in needed_allele_changes:
                     if child_node.allele is not None:
                         difference = sum(mutation_diff.get_mutation_diff(parent_allele, child_node.allele,
-                                                                             expected_allele_number))
+                                                                         expected_allele_number))
                         score += difference
                     continue
                 id_entry_child = needed_allele_changes[child_node]
@@ -577,7 +577,7 @@ def set_alleles(
                 all_zero = True  # if this remains true there is no difference from staying on the current allele
                 for child_allele in id_entry_child:
                     difference = sum(mutation_diff.get_mutation_diff(parent_allele, child_allele,
-                                                                         expected_allele_number))
+                                                                     expected_allele_number))
                     # number of mutations that are avoided choosing this one
                     avoided_mutations = id_entry_child[child_allele] - difference
                     if avoided_mutations != 0:
@@ -645,7 +645,7 @@ def plot_pedigree(
                     edge_color = get_edge_color(colors, allele_color_mapping, tuple(child_node.allele.components))
 
                     distance = sum(mutation_diff.get_mutation_diff(parent_node.allele, child_node.allele,
-                                                                       expected_allele_number))
+                                                                   expected_allele_number))
                     new_mutated_parents.append(child_node)
                     total_mutations += distance
                     dot.edge(parent_node.id, child_node.id, label=str(int(distance)), color=edge_color)
