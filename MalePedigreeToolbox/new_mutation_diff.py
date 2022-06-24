@@ -98,7 +98,10 @@ class Allele:
 
     def __eq__(self, other: "Allele"):
         if not isinstance(other, Allele):
-            raise ValueError("Only compare alleles")
+            # this is an acceptable alternative
+            if other is None:
+                return False
+            raise ValueError(f"Only compare alleles. Cannot compare against {other}")
         return sorted(self.components) == sorted(other.components)
 
 

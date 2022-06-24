@@ -828,6 +828,10 @@ def write_marker_mutations(
     for marker, nr_dict in mutation_dict.items():
         total_individuals = nr_dict["m"]
         total_mutations = nr_dict["tm"]
+        # in case of no mutations in the whole pedigree
+        if total_individuals == total_mutations == 0:
+            text_list.append(f"{marker},{total_individuals},{total_mutations},nan,nan,nan")
+            continue
         if total_individuals == 0:
             ratio = 0
         else:
