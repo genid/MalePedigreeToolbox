@@ -106,8 +106,8 @@ def main(*arguments, is_gui=False):
         distances.main(name_space)
     elif name_space.subcommand == "mut_diff":
         LOG.info("Loading libraries...")
-        from MalePedigreeToolbox import new_mutation_diff
-        new_mutation_diff.main(name_space)
+        from MalePedigreeToolbox import mutation_diff
+        mutation_diff.main(name_space)
     elif name_space.subcommand == "draw_pedigrees":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import draw_pedigrees

@@ -1,7 +1,7 @@
 
 from unittest import TestCase
 
-from MalePedigreeToolbox import new_mutation_diff as mutation_diff
+from MalePedigreeToolbox import mutation_diff as mutation_diff
 
 
 class TestMutationDiff(TestCase):
