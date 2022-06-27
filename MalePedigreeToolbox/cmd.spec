@@ -5,9 +5,9 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['.', './prediction_code'],
+             pathex=['.', './generational_distance_prediction'],
              binaries=[],
-             datas=[('./prediction_code/models', 'models'), ('./Graphviz', 'Graphviz')],
+             datas=[('./generational_distance_prediction/models', 'models'), ('./Graphviz', 'Graphviz')],
              hiddenimports=["sklearn.neighbors._partition_nodes"],
              hookspath=[],
              hooksconfig={},
