@@ -212,7 +212,7 @@ def get_weight(
 def read_marker_rate_file(
     file: Path
 ) -> Dict[str, float]:
-    """Read a marker rate file tho weight the number of mutations of all alleles"""
+    """Read a marker rate file in order to weight the number of mutations of all alleles"""
     rate_dict = {}
     with open(file) as f:
         f.readline()  # ignore the header
