@@ -11,14 +11,16 @@ class Test(TestCase):
         create_temp_out()
 
     def tearDown(self) -> None:
-        clean_temp_out()
+        #clean_temp_out()
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        clean_log_files()
+        #clean_log_files()
+        pass
 
     def test_distance_command(self):
-        output_dir = TEMP_OUT_DIR / 'test_outdir'
+        output_dir = TEMP_OUT_DIR / 'test_o utdir'
         command = f'mpt -f -ll silent distances -t "{TEST_FILE_DIR / "small_TGFs"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "distances.csv"))
@@ -62,7 +64,7 @@ class Test(TestCase):
                 self.assertEqual(values[1], expected[0])
                 self.assertEqual(values[2], expected[1])
 
-    def test_draw_pedigrees(self):
+    def test_predict_pedigrees(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
         command = f'mpt -f -ll silent predict_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -t both -o "{output_dir}" -rs 1 '
