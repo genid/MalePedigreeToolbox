@@ -34,6 +34,22 @@ predict_frame = Frame(
             " be raised if not all required markers are present.",
             size=(LINE_LENGTH, 3)
         )],
+        [TextLabel("Custom model (optional)"),
+            sg.InputText(key="custom_model_pr", size=(HALFWAY_START_NR, 1)),
+            sg.FileBrowse(key="custom_model_pr")],
+        [sg.Text(
+            "A path leading to a joblib dumped model. If a cutom model is provided the model choice is ignored",
+            size=(LINE_LENGTH, 1)
+        )],
+        [TextLabel("Training file (optional)"),
+         sg.InputText(key="training_file_pr", size=(HALFWAY_START_NR, 1)),
+         sg.FileBrowse(key="training_file_pr")],
+        [sg.Text(
+            "The file that was used to train the data, to make sure that the order of the"
+            " input file is the same as the order expected by the model. This only needs to"
+            " be specified when using a custom model",
+            size=(LINE_LENGTH, 2)
+        )],
         [TextLabel("Include probability plots"),
          sg.Checkbox(
              "",

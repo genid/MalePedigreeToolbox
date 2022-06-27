@@ -216,7 +216,13 @@ def get_command(values):
             arguments.append("-pf")
         output_dir = values['output_all']
     elif values["mpt_tabs"] == "Predict":
-        arguments += ["predict", "-i", values["input_pr"], "-pm", values["model_choice_pr"], "-o", values["output_pr"]]
+        arguments += ["predict", "-i", values["input_pr"], "-o", values["output_pr"]]
+        if values["custom_model_pr"] != '':
+            if values["training_file_pr"] != '':
+                arguments.extend(["-tf", values["training_file_pr"]])
+            arguments.extend(["-m", values["custom_model_pr"]])
+        else:
+            arguments.extend(["-pm", values["model_choice_pr"]])
         if values["plots_pr"] is True:
             arguments.append("-p")
         output_dir = values["output_pr"]
