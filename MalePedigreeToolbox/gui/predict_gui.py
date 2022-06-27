@@ -8,7 +8,7 @@ sg.theme("Lightgrey1")
 
 
 predict_frame = Frame(
-    "Predict",
+    "Predict generations",
     layout=[
         [sg.Text(
             "Predict the generational distance between 2 individuals based on the "

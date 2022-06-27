@@ -108,10 +108,10 @@ def main(*arguments, is_gui=False):
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import mutation_diff
         mutation_diff.main(name_space)
-    elif name_space.subcommand == "draw_pedigrees":
+    elif name_space.subcommand == "predict_pedigrees":
         LOG.info("Loading libraries...")
-        from MalePedigreeToolbox import draw_pedigrees
-        draw_pedigrees.main(name_space)
+        from MalePedigreeToolbox import predict_pedigrees
+        predict_pedigrees.main(name_space)
     elif name_space.subcommand == "ped_mut_graph":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import infer_pedigree_mutations
@@ -122,15 +122,15 @@ def main(*arguments, is_gui=False):
         run_it_all.main(name_space)
     elif name_space.subcommand == "simulate":
         LOG.info("Loading libraries...")
-        from MalePedigreeToolbox.prediction_code import simulate_mutations
+        from MalePedigreeToolbox.generational_distance_prediction import simulate_mutations
         simulate_mutations.main(name_space)
     elif name_space.subcommand == "make_models":
         LOG.info("Loading libraries...")
-        from MalePedigreeToolbox.prediction_code import make_models
+        from MalePedigreeToolbox.generational_distance_prediction import make_models
         make_models.main(name_space)
-    elif name_space.subcommand == "predict":
+    elif name_space.subcommand == "predict_generations":
         LOG.info("Loading libraries...")
-        from MalePedigreeToolbox.prediction_code import classifier_predict
+        from MalePedigreeToolbox.generational_distance_prediction import classifier_predict
         classifier_predict.main(name_space)
     else:
         # should never reach here unless mistake was made by programmer
@@ -289,9 +289,10 @@ def add_infer_pedigree_mutations_parser(subparsers):
 
 
 def add_dendogram_parser(subparsers):
-    dendogram_parser = subparsers.add_parser("draw_pedigrees",
-                                             help="Draw plots based on mutation distances in a pedigree, this can be "
-                                                  "dendrograms or multi-dimensional scaling plots.")
+    dendogram_parser = subparsers.add_parser("predict_pedigrees",
+                                             help="Predict most likely closest related people based on mutation "
+                                                  "distances in a pedigree, this can be dendrograms or "
+                                                  "multi-dimensional scaling plots.")
     dendogram_parser.add_argument("-fm", "--full_marker_csv", help="The file containing full mutation "
                                                                    "differentiations (-fo / full_out.csv)"
                                                                    " generated with the mut_diff command",
@@ -439,7 +440,7 @@ def add_make_models_parser(subparsers):
 
 
 def add_predict_parser(subparsers):
-    predict_parser = subparsers.add_parser("predict",
+    predict_parser = subparsers.add_parser("predict_generations",
                                            help="Predict the generational distance between 2 individuals based on the "
                                                 "number of mutations between them.")
     predict_parser.add_argument("-i", "--input",

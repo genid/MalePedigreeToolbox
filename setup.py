@@ -50,5 +50,5 @@ setup(
         ],
     },
     include_package_data=True,
-    package_data={"MalePedigreeToolbox": ["prediction_code/models/*"]}
+    package_data={"MalePedigreeToolbox": ["generational_distance_prediction/models/*"]}
 )

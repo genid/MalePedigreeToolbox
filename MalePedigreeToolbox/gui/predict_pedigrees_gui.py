@@ -8,11 +8,12 @@ sg.theme("Lightgrey1")
 
 
 draw_pedigree_frame = Frame(
-    "Draw Pedigrees",
+    "Predict pedigrees",
     layout=[
         [sg.Text(
-            "Draw plots based mutation distances in a pedigree, this can be dendograms or multi-dimensional"
-            " scaling plots.",
+            "Predict most likely closest related people based on mutation "
+            "distances in a pedigree, this can be dendrograms or "
+            "multi-dimensional scaling plots.",
             size=(LINE_LENGTH, 3)
         )],
         [TextLabel("Full marker file"),

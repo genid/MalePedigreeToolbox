@@ -12,7 +12,7 @@ import traceback
 from MalePedigreeToolbox.gui import distance_gui
 from MalePedigreeToolbox.gui import mutation_differentiation_gui
 from MalePedigreeToolbox.gui import infer_pedigree_mutations_gui
-from MalePedigreeToolbox.gui import draw_pedigrees_gui
+from MalePedigreeToolbox.gui import predict_pedigrees_gui
 from MalePedigreeToolbox.gui import all_gui
 from MalePedigreeToolbox.gui import predict_gui
 
@@ -48,10 +48,10 @@ def mpt_gui():
                     [[gui_parts.Column(mutation_differentiation_gui.layout, scrollable=True)]])],
             [sg.Tab("Pedigree mutation graph",
                     [[gui_parts.Column(infer_pedigree_mutations_gui.layout, scrollable=True)]])],
-            [sg.Tab("Draw pedigrees",
-                    [[gui_parts.Column(draw_pedigrees_gui.layout, scrollable=True)]])],
+            [sg.Tab("Predict pedigrees",
+                    [[gui_parts.Column(predict_pedigrees_gui.layout, scrollable=True)]])],
             [sg.Tab("Run it all", [[gui_parts.Column(all_gui.layout, scrollable=True)]])],
-            [sg.Tab("Predict", [[gui_parts.Column(predict_gui.layout, scrollable=True)]])],
+            [sg.Tab("Predict generations", [[gui_parts.Column(predict_gui.layout, scrollable=True)]])],
         ], enable_events=True, key="mpt_tabs"
         )],
         [sg.Button("Start", key="start_button", button_color=("white", "green")),
@@ -177,8 +177,8 @@ def get_command(values):
 
         output_dir = values['output_pmg']
 
-    elif values["mpt_tabs"] == "Draw pedigrees":
-        arguments += ["draw_pedigrees", "-fm", values['full_marker_dp'], '-t', values['plot_choice_dp'],
+    elif values["mpt_tabs"] == "Predict pedigrees":
+        arguments += ["predict_pedigrees", "-fm", values['full_marker_dp'], '-t', values['plot_choice_dp'],
                       '-o', values['output_dp']]
         marker_rate_file = values['marker_rate_dp']
         if marker_rate_file != '':
@@ -215,8 +215,8 @@ def get_command(values):
         if values["predict_file_all"] is True:
             arguments.append("-pf")
         output_dir = values['output_all']
-    elif values["mpt_tabs"] == "Predict":
-        arguments += ["predict", "-i", values["input_pr"], "-o", values["output_pr"]]
+    elif values["mpt_tabs"] == "Predict generations":
+        arguments += ["predict_generations", "-i", values["input_pr"], "-o", values["output_pr"]]
         if values["custom_model_pr"] != '':
             if values["training_file_pr"] != '':
                 arguments.extend(["-tf", values["training_file_pr"]])

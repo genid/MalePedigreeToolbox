@@ -64,7 +64,7 @@ class Test(TestCase):
 
     def test_draw_pedigrees(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent draw_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
+        command = f'mpt -f -ll silent predict_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -t both -o "{output_dir}" -rs 1 '
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt",

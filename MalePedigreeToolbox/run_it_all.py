@@ -17,7 +17,7 @@ from pathlib import Path
 # own imports
 from MalePedigreeToolbox import distances
 from MalePedigreeToolbox import mutation_diff
-from MalePedigreeToolbox import draw_pedigrees
+from MalePedigreeToolbox import predict_pedigrees
 from MalePedigreeToolbox import infer_pedigree_mutations
 from MalePedigreeToolbox import thread_termination
 
@@ -52,7 +52,7 @@ def main(
     name_space.outdir = main_out_folder
     LOG.info("")
     LOG.info("Step 3/4")
-    draw_pedigrees.main(name_space)
+    predict_pedigrees.main(name_space)
 
     # set the variables for the pedigree graphs module in the namespace --> all values are already set
     LOG.info("")
