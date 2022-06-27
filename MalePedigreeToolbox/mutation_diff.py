@@ -338,6 +338,7 @@ class DifferenceMatrix:
         return '\n'.join(final_str_list)
 
 
+@thread_termination.ThreadTerminable
 def get_mutation_diff(
     parent_allele: Allele,
     child_allele: Allele,
@@ -349,6 +350,7 @@ def get_mutation_diff(
     return score
 
 
+@thread_termination.ThreadTerminable
 def get_optimal_nr_mutations(
     all_allele_pairs: List[Tuple[str, str]],
     allele_name_mapping: Dict[str, List[float]],
@@ -370,6 +372,7 @@ def get_optimal_nr_mutations(
     return best_mutations, best_allele_mapping
         
 
+@thread_termination.ThreadTerminable
 def _calculate_mutations(
     allele_pairs: List[Tuple[str, str]],
     allele_name_mapping: Dict[str, List[float]],
@@ -511,6 +514,7 @@ def main(name_space):
     run(alleles_df, distance_file, outdir, include_predict_file)
 
 
+@thread_termination.ThreadTerminable
 def sort_pedigree_information(
     alleles_list_dict: List[Dict[str, Any]]
 ) -> Tuple[Dict[str, Dict[str, Dict[str, List[float]]]], Dict[str, Dict[str, int]]]:
@@ -648,21 +652,3 @@ def run(
                 f.write(','.join(str(marker_dict[marker]) if marker in marker_dict else "0" for marker in markers))
                 f.write("\n")
     LOG.info("Finished calculating differentiation rates.")
-
-
-if __name__ == '__main__':
-    l2 = [48, 66.1]
-    l1 = [48, 66.1, 67.1]
-    l1 = Allele(l1)
-    l2 = Allele(l2)
-
-    matrix_ = DifferenceMatrix(l1, l2, 4)
-    score_ = matrix_.calculate_mutations()
-    print(matrix_)
-    print(score_)
-
-    # l1 = [10, 11]
-    # l2 = [10, 11, 12]
-    # l3 = [10]
-    #
-    # print(get_optimal_nr_mutations([("l1", "l2"), ("l1", "l3")], {"l1": [10, 11], "l2": [10, 11, 12], "l3": [10]},  3))

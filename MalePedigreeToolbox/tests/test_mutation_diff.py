@@ -265,4 +265,3 @@ class TestMutationDiff(TestCase):
         l2 = [55, 56, 64.1, 65.1]
         mapping = {"l1": l1, "l2": l2}
         self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 0, 1, 0]])
-        
