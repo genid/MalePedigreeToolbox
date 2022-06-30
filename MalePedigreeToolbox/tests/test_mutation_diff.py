@@ -62,7 +62,7 @@ class TestMutationDiff(TestCase):
         mapping = {"l1": l1, "l2": l2}
         # both of these are considered correct the first one is returned
         diff = mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 3)[0]
-        self.assertListEqual(diff,  [[0, 5, 0]] or diff,  [[0, 1, 4]])
+        self.assertListEqual(diff,  [[0, 1, 4]])
 
     def test_get_optimal_nr_mutations10(self):
         l1 = [12, 13, 18, 19]
@@ -216,7 +216,7 @@ class TestMutationDiff(TestCase):
         l1 = [10, 11.1, 11, 12]
         l2 = [10, 11.1, 12.1, 13.1]
         mapping = {"l1": l1, "l2": l2}
-        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 0, 3, 1]])
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 0, 2, 2]])
 
     def test_get_optimal_nr_mutations35(self):
         l1 = [14, 12]
@@ -249,7 +249,7 @@ class TestMutationDiff(TestCase):
         l4 = [18]
         mapping = {"l1": l1, "l2": l2, "l3": l3, "l4": l4}
         self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2"), ("l3", "l4")], mapping, 3)[0],
-                             [[0, 10, 0], [8, 8, 8]])
+                             [[0, 9, 1], [8, 8, 8]])
 
     def test_get_optimal_nr_mutations39(self):
         l1 = [10, 11, 20]
@@ -265,3 +265,23 @@ class TestMutationDiff(TestCase):
         l2 = [55, 56, 64.1, 65.1]
         mapping = {"l1": l1, "l2": l2}
         self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 0, 1, 0]])
+
+    def test_get_optimal_nr_mutations41(self):
+        l1 = [13, 17.2, 18]
+        l2 = [13, 16, 17.2, 18.2]
+        l3 = [13, 16, 17.2]
+        mapping = {"l1": l1, "l2": l2, "l3": l3}
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2"), ("l2", "l3"), ("l1", "l3")], mapping, 4)[0],
+                             [[0, 2, 0, 1], [0, 0, 0, 1], [0, 0, 2, 0]])
+
+    def test_get_optimal_nr_mutations42(self):
+        l1 = [13, 16, 17.2]
+        l2 = [13, 17.2, 18]
+        mapping = {"l1": l1, "l2": l2}
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 2, 0, 0]])
+
+    def test_get_optimal_nr_mutations43(self):
+        l1 = [13, 17]
+        l2 = [16, 18]
+        mapping = {"l1": l1, "l2": l2}
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 2)[0],  [[3, 1]])

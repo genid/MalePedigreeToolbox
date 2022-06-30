@@ -3,6 +3,7 @@ from math import isclose, ceil
 from collections import defaultdict
 import pandas as pd
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 import logging
 import math
 from statsmodels.stats.proportion import proportion_confint
@@ -124,13 +125,15 @@ class DifferenceMatrix:
         self.expected_size = expected_size
 
         # in case of equal alleles we already know the score
+        is_same = True
         if self.allele1 != self.allele2:
+            is_same = False
 
-            self._rows = []
-            self._create_matrix()
-            self.score = None
+        self._rows = []
+        self._create_matrix(is_same)
+        self.score = None
 
-    def _create_matrix(self):
+    def _create_matrix(self, is_same):
         # first fill the matrix based on the current alleles
         for allele_component1 in self.allele1:
             matrix_row = []
@@ -143,6 +146,8 @@ class DifferenceMatrix:
                 difference = ceil(difference)
                 matrix_row.append(difference)
             self._rows.append(matrix_row)
+        if is_same:
+            return
 
         # equalize the lengths of both alleles
         if len(self.allele1) != len(self.allele2):
@@ -159,20 +164,8 @@ class DifferenceMatrix:
         if len(self.allele1) == len(self.allele2):
             return
 
-        # if still a difference duplicate such that the unaligned allele gets the optimal match
-        sorted_score_coordinates = self._get_sorted_score_coordinates()
-
-        # select the optimal mutations
-        covered_rows = set()
-        covered_columns = set()
-        score_index = 0
-        while len(covered_rows) < len(self._rows[0]):
-            row, column = sorted_score_coordinates[score_index]
-            score_index += 1
-            if row in covered_rows or column in covered_columns:
-                continue
-            covered_rows.add(row)
-            covered_columns.add(column)
+        # allign optimally and return all alligned rows
+        _, covered_rows = self._get_optimal_mutations(self._rows)
 
         self._duplicate_in_allele2(covered_rows)
 
@@ -186,28 +179,43 @@ class DifferenceMatrix:
                 if value < min_value:
                     min_value = value
                     min_index = col_index
-            # making matrix complete
-            for row in self._rows:
-                row.append(row[min_index])
-            # make sure to add the duplication to the allele
-            self.allele2.duplicate_component(min_index)
+            self._duplicate_column(min_index)
+
+    def _duplicate_column(self, index):
+        self.allele2.duplicate_component(index)
+        for row in self._rows:
+            row.append(row[index])
+
+    def _duplicate_row(self, index):
+        self.allele1.duplicate_component(index)
+        self._rows.append(self._rows[index].copy())
 
     def _duplicate_simultanious(self):
         # duplicate both alleles when both of them are equally to short of the expected size
         self._equalize_decimals((self.expected_size - self.nr_rows, self.expected_size - self.nr_rows))
 
         for _ in range(self.expected_size - self.nr_rows):
-            rindex, cindex = self._min_row(list(range(self.nr_rows))), self._min_column(list(range(self.nr_columns)))
 
-            # if we add the same allele resulting in an addition of 0 score, dont add it since there are other
-            # possibilities
-            if self.allele1[rindex] == self.allele2[cindex]:
-                continue
-            self._rows.append(self._rows[rindex].copy())
-            self.allele1.duplicate_component(rindex)
-            self.allele2.duplicate_component(cindex)
-            for row in self._rows:
-                row.append(row[cindex])
+            cindex1, rindex1 = self._min_column(list(range(self.nr_columns))), self._min_row(list(range(self.nr_rows)))
+            new_rows = [row.copy() for row in self._rows]
+            if self.allele1[rindex1] != self.allele2[cindex1]:
+                for row in new_rows:
+                    row.append(row[cindex1])
+                new_rows.append(new_rows[rindex1].copy())
+            total_min_individual = sum(self._get_optimal_mutations(new_rows)[0])
+
+            cindex2, rindex2 = self._min_value_coordinate()
+            new_rows = [row.copy() for row in self._rows]
+            if self.allele1[rindex2] != self.allele2[cindex2]:
+                for row in new_rows:
+                    row.append(row[cindex2])
+                new_rows.append(new_rows[rindex2].copy())
+            if sum(self._get_optimal_mutations(new_rows)[0]) < total_min_individual:
+                self._duplicate_column(cindex2)
+                self._duplicate_row(rindex2)
+            else:
+                self._duplicate_column(cindex1)
+                self._duplicate_row(rindex1)
 
     def _equalize_decimals(self, max_changes: Tuple[int, int] = None):
         # equalize the differences in decimals for both alleles
@@ -274,6 +282,16 @@ class DifferenceMatrix:
             min_value = lowest_value
         return min_index
 
+    def _min_value_coordinate(self):
+        lowest_value = self._rows[0][0]
+        lowest_coord = [0, 0]
+        for rindex, row in enumerate(self._rows):
+            for cindex, value in enumerate(row):
+                if value < lowest_value:
+                    lowest_value = value
+                    lowest_coord = [cindex, rindex]
+        return lowest_coord
+
     def _get_sorted_score_coordinates(self):
         coordinates = [(i, j) for j in range(self.nr_columns) for i in range(self.nr_rows)]
         return sorted(coordinates, key=lambda coord: self._rows[coord[0]][coord[1]])
@@ -281,23 +299,9 @@ class DifferenceMatrix:
     def calculate_mutations(self) -> List[int]:
         if self.allele1 == self.allele2:
             return [0 for _ in range(self.expected_size)]
-        mutations = []
-        score_rows = []
-        sorted_score_coordinates = self._get_sorted_score_coordinates()
 
         # select the optimal mutations
-        covered_rows = set()
-        covered_columns = set()
-        score_index = 0
-        while len(mutations) < len(self._rows[0]):
-            row, column = sorted_score_coordinates[score_index]
-            score_index += 1
-            if row in covered_rows or column in covered_columns:
-                continue
-            covered_rows.add(row)
-            covered_columns.add(column)
-            mutations.append(self._rows[row][column])
-            score_rows.append(row)
+        mutations, score_rows = self._get_optimal_mutations(self._rows)
 
         # sort mutations based on the order of the longest allele (allele1)
         zipped_values = zip(mutations, score_rows)
@@ -311,6 +315,12 @@ class DifferenceMatrix:
         for _ in range(self.expected_size - len(mutations)):
             mutations.append(0)
         return mutations
+
+    def _get_optimal_mutations(self, matrix):
+        np_matrix = np.array(matrix)
+        rows, columns = linear_sum_assignment(np_matrix)
+        mutations = [matrix[rows[index]][columns[index]] for index in range(len(rows))]
+        return mutations, rows
 
     @property
     def nr_rows(self):
@@ -369,6 +379,7 @@ def get_optimal_nr_mutations(
             best_allele_mapping = allele_mapping
         else:
             break
+        allowed_over_duplications += 1
     return best_mutations, best_allele_mapping
         
 
@@ -602,8 +613,7 @@ def run(
             optimal_mutations, _ = get_optimal_nr_mutations(all_allele_pairs, pair_name_mapping,
                                                             longest_allele_per_pedigree_marker[pedigree][marker])
             for mutations, (sample1, sample2) in zip(optimal_mutations, sample_combs):
-                if len(mutations) > longest_allele:
-                    longest_allele = len(mutations)
+                longest_allele = max(longest_allele, len(mutations))
                 sum_mutations = sum(mutations)
                 all_information_list.append([len(all_information_list), pedigree, sample1, sample2, marker,
                                             mutations, sum_mutations])
