@@ -267,12 +267,14 @@ class TestMutationDiff(TestCase):
         self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 0, 1, 0]])
 
     def test_get_optimal_nr_mutations41(self):
+        # order of inputs matters
         l1 = [13, 17.2, 18]
-        l2 = [13, 16, 17.2, 18.2]
-        l3 = [13, 16, 17.2]
+        l2 = [13, 16, 17.2]
+        l3 = [13, 16, 17.2, 18.2]
         mapping = {"l1": l1, "l2": l2, "l3": l3}
-        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2"), ("l2", "l3"), ("l1", "l3")], mapping, 4)[0],
-                             [[0, 2, 0, 1], [0, 0, 0, 1], [0, 0, 2, 0]])
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2"), ("l1", "l3"), ("l2", "l3")],
+                                                                    mapping, 4)[0],
+                             [[0, 0, 2, 0], [0, 2, 0, 1], [0, 0, 0, 1]])
 
     def test_get_optimal_nr_mutations42(self):
         l1 = [13, 16, 17.2]

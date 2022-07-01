@@ -107,6 +107,20 @@ class Allele:
 
 
 class DifferenceMatrix:
+    """Creates a matrix of differences where the minimum path is chosen based on minimum weight matching in bipartite
+    graphs. In order for this to give a proper result we have to scale the matrix into a square and ensure that the
+    expected nr of allele components are met for both alleles.
+
+    Alleles are permanently changed based on these duplications to ensure that the whole pedigree calculations are based
+    on the same alleles
+
+    There are a couple of steps:
+    1. equalize allele lengths duplicating alleles with imbalanced decimals
+    2. duplicate imbalanced decimals to get to the expected size
+    3. duplicate both alleles at the same time. Not adding the same duplication in both alleles. This will result in 0
+      mutations and potentially create unfavorable alleles in case of more complex relations between other alleles in
+      the pedigree
+    """
     NO_MATCHING_DECIMAL_PENALTY: int = 1000
 
     allele1: Allele
@@ -202,6 +216,8 @@ class DifferenceMatrix:
                 for row in new_rows:
                     row.append(row[cindex1])
                 new_rows.append(new_rows[rindex1].copy())
+            else:
+                cindex1, rindex1 = None, None
             total_min_individual = sum(self._get_optimal_mutations(new_rows)[0])
 
             cindex2, rindex2 = self._min_value_coordinate()
@@ -210,10 +226,18 @@ class DifferenceMatrix:
                 for row in new_rows:
                     row.append(row[cindex2])
                 new_rows.append(new_rows[rindex2].copy())
+            else:
+                cindex2, rindex2 = None, None
+
+            # if indexes are None we are adding the same value. In this case we must ignore the duplications
             if sum(self._get_optimal_mutations(new_rows)[0]) < total_min_individual:
+                if cindex2 is None:
+                    return
                 self._duplicate_column(cindex2)
                 self._duplicate_row(rindex2)
             else:
+                if cindex1 is None:
+                    return
                 self._duplicate_column(cindex1)
                 self._duplicate_row(rindex1)
 
