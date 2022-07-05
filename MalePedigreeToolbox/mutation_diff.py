@@ -180,32 +180,43 @@ class DifferenceMatrix:
         # allign optimally and return all alligned rows
         _, covered_rows, _ = self._get_optimal_mutations(self._rows)
 
-        self._add_best_duplicating_column(covered_rows, range(self.nr_rows))
+        self._add_best_duplicating_column(covered_rows, range(self.nr_rows), range(self.nr_columns))
 
-    def _add_best_duplicating_column(self, covered_rows, allowed_rows):
-        # select a row(s) to duplicate from rows that where not alligned during optimal allignment
-        unused_rows = [i for i in allowed_rows if i not in covered_rows]
-        for row_index in unused_rows:
-            min_value = self._rows[row_index][0]
-            min_index = 0
-            for col_index, value in enumerate(self._rows[row_index]):
+    def _add_best_duplicating_column(self, covered_rows, allowed_rows_i, allowed_columns_i, max_=None):
+        # select a column(s) to duplicate based on unaligned rows. A subset of the matrix can be selected to choose from
+        # based on the allowed columns and rows
+        unused_rows_i = [i for i in allowed_rows_i if i not in covered_rows]
+        if max_ is None:
+            max_ = len(unused_rows_i)
+        for nr, rindex in enumerate(unused_rows_i):
+            min_value = self._rows[rindex][allowed_columns_i[0]]
+            min_index = allowed_columns_i[0]
+            for cindex in allowed_columns_i:
+                value = self._rows[rindex][cindex]
                 if value < min_value:
                     min_value = value
-                    min_index = col_index
+                    min_index = cindex
             self._duplicate_column(min_index)
+            if nr >= max_:
+                return
 
-    def _add_best_duplicating_row(self, covered_columns, allowed_columns):
-        # select a column(s) to duplicate from columns that where not alligned during optimal allignment
-        unused_columns = [i for i in allowed_columns if i not in covered_columns]
-        for col_index in unused_columns:
-            min_value = self._rows[0][col_index]
-            min_index = 0
-            for row_index, row in enumerate(self._rows):
-                value = row[col_index]
+    def _add_best_duplicating_row(self, covered_columns, allowed_columns_i, allowed_rows_i, max_=None):
+        # select a row(s) to duplicate based on unaligned columns. A subset of the matrix can be selected to choose from
+        # based on the allowed columns and rows
+        unused_columns_i = [i for i in allowed_columns_i if i not in covered_columns]
+        if max_ is None:
+            max_ = len(unused_columns_i)
+        for nr, cindex in enumerate(unused_columns_i):
+            min_value = self._rows[allowed_rows_i[0]][cindex]
+            min_index = allowed_rows_i[0]
+            for rindex in allowed_rows_i[1:]:
+                value = self._rows[rindex][cindex]
                 if value < min_value:
                     min_value = value
-                    min_index = col_index
+                    min_index = rindex
             self._duplicate_row(min_index)
+            if nr >= max_:
+                return
 
     def _duplicate_column(self, index):
         self.allele2.duplicate_component(index)
@@ -272,7 +283,9 @@ class DifferenceMatrix:
                     _, _, covered_columns = self._get_optimal_mutations(
                         [[self._rows[rindex][cindex] for cindex in col_indexes] for rindex in row_indexes]
                     )
-                    self._add_best_duplicating_row([col_indexes[i] for i in covered_columns], col_indexes)
+
+                    self._add_best_duplicating_row([col_indexes[i] for i in covered_columns], col_indexes,
+                                                   row_indexes, 1)
                     total_changes[0] += 1
                 elif difference > 0 and (max_changes is None or max_changes[1] > total_changes[1]):
                     # more rows with decimal then columns
@@ -281,7 +294,8 @@ class DifferenceMatrix:
                     _, covered_rows, _ = self._get_optimal_mutations(
                         [[self._rows[rindex][cindex] for cindex in col_indexes] for rindex in row_indexes]
                     )
-                    self._add_best_duplicating_column([row_indexes[i] for i in covered_rows], row_indexes)
+                    self._add_best_duplicating_column([row_indexes[i] for i in covered_rows], row_indexes,
+                                                      col_indexes, 1)
                     total_changes[1] += 1
                 elif total_changes[0] >= max_changes[0] and total_changes[1] >= max_changes[1]:
                     # in case the max changes are reached
@@ -705,8 +719,5 @@ def run(
 
 
 if __name__ == '__main__':
-    l1 = [58.2, 61, 64]
-    l2 = [58.2, 61, 63, 64]
-    l3 = [58.2, 60.2, 64]
-    print(get_mutation_diff(Allele([48, 66.1]), Allele([48, 66.1, 67.1]), 4))
+    print(get_mutation_diff(Allele([48, 66.1]), Allele([48, 66.1, 67.1]), 3))
     #print(get_mutation_diff(Allele([58.2, 60.2, 64]), Allele([58.2, 61, 64]), 4))

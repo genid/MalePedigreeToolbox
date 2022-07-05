@@ -301,3 +301,15 @@ class TestMutationDiff(TestCase):
         mapping = {"l1": l1, "l2": l2, "l3": l3}
         self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l3"), ("l1", "l2")],
                                                                     mapping, 4)[0],  [[0, 3, 0, 2, 0], [0, 0, 0, 0, 1]])
+
+    def test_get_optimal_nr_mutations46(self):
+        l1 = [58.2, 61, 64]
+        l2 = [58.2, 60.2, 64]
+        mapping = {"l1": l1, "l2": l2}
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 3, 0, 2]])
+
+    def test_get_optimal_nr_mutations47(self):
+        l1 = [58.2, 60.2, 64]
+        l2 = [58.2, 61, 64]
+        mapping = {"l1": l1, "l2": l2}
+        self.assertListEqual(mutation_diff.get_optimal_nr_mutations([("l1", "l2")], mapping, 4)[0],  [[0, 2, 0, 3]])
