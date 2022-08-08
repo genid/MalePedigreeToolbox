@@ -171,31 +171,21 @@ def adjust_fo_file_values(
         marker_rate_dict = defaultdict(lambda: 1)
 
     all_summary_lines = []
-    values: List[Union[str, float]] = lines[1].strip().split(",")
-    try:
-        summary_lines = [values[:4] + [float(values[-1]) * get_weight(marker_rate_dict[values[4]])]]
-        for line in lines[2:]:
-            values = line.strip().split(",")
-            # a new dendogram begins
-            if values[2:4] != summary_lines[-1][2:4] or values[1] != summary_lines[-1][1]:
-                total_wheighted_mutations = 0
-                for sline in summary_lines:
-                    total_wheighted_mutations += sline[-1]
-                all_summary_lines.append(summary_lines[0][:4] + [total_wheighted_mutations])
-                summary_lines = [values[:4] + [float(values[-1]) *
-                                               get_weight(marker_rate_dict[values[4]])]]
-            else:
-                summary_lines.append(
-                    values[:4] + [float(values[-1]) * get_weight(marker_rate_dict[values[4]])]
-                )
-    except KeyError:
-        LOG.error(f"Marker file is incomplete. Marker {values[4]} is missing.")
-        raise utility.MalePedigreeToolboxError(f"Marker file is incomplete. Marker {values[4]} is missing.")
+    last_values = lines[1].strip().split(",")
+    summary_dict = defaultdict(int)
+    for line in lines[1:]:
+        values = line.strip().split(",")
+        nr, pedigree, first_id, second_id, marker = values[:5]
+        mutations = int(values[-1])
+        # a new dendrogram begins
+        if pedigree != last_values[1]:
+            for (first_id, second_id), mutation_wheight in summary_dict.items():
+                all_summary_lines.append([last_values[1], first_id, second_id, mutation_wheight])
+            summary_dict = defaultdict(int)
+        summary_dict[(first_id, second_id)] += mutations * get_weight(marker_rate_dict[values[4]])
     # make sure to do the last one
-    total_wheighted_mutations = 0
-    for sline in summary_lines:
-        total_wheighted_mutations += sline[-1]
-    all_summary_lines.append(summary_lines[0][:4] + [total_wheighted_mutations])
+    for (first_id, second_id), mutation_wheight in summary_dict.items():
+        all_summary_lines.append([last_values[1], first_id, second_id, mutation_wheight])
     return all_summary_lines
 
 
@@ -276,9 +266,9 @@ def get_distance_matrix(
     """Get a distance matrix based connections of nodes in a pedigree"""
     pedigree_dict = {}
     for values in pedigree_lines:
-        node1 = values[2]
-        node2 = values[3]
-        mutation_distance = float(values[4])
+        node1 = values[1]
+        node2 = values[2]
+        mutation_distance = float(values[3])
         if node1 not in pedigree_dict:
             pedigree_dict[node1] = {node2: mutation_distance}
         else:
