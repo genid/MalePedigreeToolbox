@@ -175,14 +175,15 @@ def adjust_fo_file_values(
     summary_dict = defaultdict(int)
     for line in lines[1:]:
         values = line.strip().split(",")
-        nr, pedigree, first_id, second_id, marker = values[:5]
+        _, pedigree, first_id, second_id, marker = values[:5]
         mutations = int(values[-1])
         # a new dendrogram begins
         if pedigree != last_values[1]:
-            for (first_id, second_id), mutation_wheight in summary_dict.items():
-                all_summary_lines.append([last_values[1], first_id, second_id, mutation_wheight])
+            for (id1, id2), mutation_wheight in summary_dict.items():
+                all_summary_lines.append([last_values[1], id1, id2, mutation_wheight])
             summary_dict = defaultdict(int)
         summary_dict[(first_id, second_id)] += mutations * get_weight(marker_rate_dict[values[4]])
+        last_values = values
     # make sure to do the last one
     for (first_id, second_id), mutation_wheight in summary_dict.items():
         all_summary_lines.append([last_values[1], first_id, second_id, mutation_wheight])
