@@ -72,7 +72,7 @@ def main(
     prev_total = 0
     shown_cluster_warning = [False]
     for index, pedigree_lines in enumerate(get_pedigree_lines(lines)):
-        pedigree_name = pedigree_lines[0][1]
+        pedigree_name = pedigree_lines[0][0]
 
         # decide number of clusters as defined by user
         requested_cluster_nr = get_nr_of_clusters(cluster_list, index, shown_cluster_warning)
@@ -250,7 +250,7 @@ def get_pedigree_lines(
     dendogram_lines = [lists[0]]
     for list_ in lists:
         # a new dendogram begins
-        if list_[1] != dendogram_lines[-1][1]:
+        if list_[0] != dendogram_lines[-1][0]:
             yield dendogram_lines
             dendogram_lines = [list_]
         else:
