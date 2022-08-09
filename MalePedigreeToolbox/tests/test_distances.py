@@ -34,7 +34,7 @@ class Test(TestCase):
         graph, id_name_link = distances.read_graph(TEST_FILE_DIR / "distances_tgfs" / "distance_test.tgf")
         # check warning messages
         expected_messages = {"File distance_test.tgf contains an edge with an unknown node.",
-                             "File distance_test.tgf contains an edge between 3 nodes. An edge should be "
+                             "File distance_test.tgf contains an edge between 3 node(s). An edge should be "
                              "between 2 nodes only."}
         self._check_warning_messages(expected_messages)
 

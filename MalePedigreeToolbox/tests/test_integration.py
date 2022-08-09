@@ -11,16 +11,16 @@ class Test(TestCase):
         create_temp_out()
 
     def tearDown(self) -> None:
-        #clean_temp_out()
-        pass
+        clean_temp_out()
+        # pass
 
     @classmethod
     def tearDownClass(cls):
-        #clean_log_files()
-        pass
+        clean_log_files()
+        # pass
 
     def test_distance_command(self):
-        output_dir = TEMP_OUT_DIR / 'test_o utdir'
+        output_dir = TEMP_OUT_DIR / 'test_outdir'
         command = f'mpt -f -ll silent distances -t "{TEST_FILE_DIR / "small_TGFs"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "distances.csv"))
@@ -69,10 +69,12 @@ class Test(TestCase):
         command = f'mpt -f -ll silent predict_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -t both -o "{output_dir}" -rs 1 '
         run_command(command)
-        self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt",
-                                            output_dir / "Draulans" / "Draulans_multi_dimensional_plot_clusters.txt",
-                                            output_dir / "Draulans" / "Draulans_predicted_dendogram.png",
-                                            output_dir / "Draulans" / "Draulans_predicted_multi_dimensional_plot.png"))
+        self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt"),
+                        "no clusters file")
+        self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_predicted_dendogram.png"),
+                        "no dendrogram image file")
+        self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_predicted_multi_dimensional_plot.png"),
+                        "no mds image file")
         self.assertTrue(confirm_lines_equal(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt",
                                             TEST_FILE_DIR / "expected_dendrogram_clusters.txt"))
 
