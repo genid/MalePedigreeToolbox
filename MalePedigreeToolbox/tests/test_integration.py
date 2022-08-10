@@ -11,13 +11,13 @@ class Test(TestCase):
         create_temp_out()
 
     def tearDown(self) -> None:
-        clean_temp_out()
-        # pass
+        # clean_temp_out()
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        clean_log_files()
-        # pass
+        # clean_log_files()
+        pass
 
     def test_distance_command(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
@@ -66,22 +66,20 @@ class Test(TestCase):
 
     def test_predict_pedigrees(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent predict_pedigrees -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
-                  f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -t both -o "{output_dir}" -rs 1 '
+        command = f'mpt -f -ll silent predict_pedigrees -c -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
+                  f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt"),
                         "no clusters file")
         self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_predicted_dendogram.png"),
                         "no dendrogram image file")
-        self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_predicted_multi_dimensional_plot.png"),
-                        "no mds image file")
         self.assertTrue(confirm_lines_equal(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt",
                                             TEST_FILE_DIR / "expected_dendrogram_clusters.txt"))
 
     def test_all(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent all -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
-                  f'"{TEST_FILE_DIR / "infer_ped_mut_alleles.csv"}"  -tp both -o "{output_dir}" -rs 1 '
+        command = f'mpt -f -ll silent all -c -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
+                  f'"{TEST_FILE_DIR / "infer_ped_mut_alleles.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "differentiation_out.csv", output_dir / "distances.csv",
                                             output_dir / "full_out.csv", output_dir / "summary_out.csv",
@@ -97,15 +95,11 @@ class Test(TestCase):
                                                     out_folder / f"pedigree_{name}_all_marker_edge_info.csv",
                                                     out_folder / f"pedigree_{name}_all_markers.pdf",
                                                     out_folder / f"{name}_dendogram_clusters.txt",
-                                                    out_folder / f"{name}_multi_dimensional_plot_clusters.txt",
-                                                    out_folder / f"{name}_predicted_dendogram.png",
-                                                    out_folder / f"{name}_predicted_multi_dimensional_plot.png"))
+                                                    out_folder / f"{name}_predicted_dendogram.png"))
             else:
                 self.assertTrue(confirm_files_exist(out_folder / f"{name}_mutations.csv",
                                                     out_folder / f"pedigree_{name}_all_marker_edge_info.csv",
                                                     out_folder / f"pedigree_{name}_all_markers.pdf",
                                                     out_folder / f"pedigree_{name}_marker_marker1.pdf",
                                                     out_folder / f"{name}_dendogram_clusters.txt",
-                                                    out_folder / f"{name}_multi_dimensional_plot_clusters.txt",
-                                                    out_folder / f"{name}_predicted_dendogram.png",
-                                                    out_folder / f"{name}_predicted_multi_dimensional_plot.png"))
+                                                    out_folder / f"{name}_predicted_dendogram.png"))

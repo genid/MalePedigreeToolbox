@@ -303,24 +303,12 @@ def add_dendogram_parser(subparsers):
                                                                 "accurate dendrograms. Leave this field empty to assume"
                                                                 " the same mutation rate for all markers.",
                                   metavar="FILE", type=utility.check_in_file)
-    dendogram_parser.add_argument("-t", "--type", help="The plot type you want. You can choose 'dendrogram' or 'MDS' or"
-                                                       "'both'. The default is 'dendrogram'",
-                                  metavar="NAME(OPTIONAL)", choices=['dendrogram', 'MDS', 'both'], default='dendrogram')
     dendogram_parser.add_argument("-o", "--outdir", help="Folder path to store all outputs",
                                   required=True, metavar="PATH",
                                   type=lambda path: utility.check_create_out_folder(path, force=FORCE))
-    dendogram_parser.add_argument("-c", "--clusters", help="The expected number of clusters for all pedigrees. This can"
-                                                           " be a single value to get the same number of clusters for"
-                                                           " all pedigrees or a list that will assign that number of "
-                                                           "clusters to a pedigree until the list is empty. The input "
-                                                           "can be a file with space seperated integers or typed out "
-                                                           "on the command line. If no value is provided the optimal "
-                                                           "clustering is calculated based on silhouette score.",
-                                  metavar="INT / FILE(OPTIONAL)", nargs="+", type=utility.check_file_int)
-    dendogram_parser.add_argument("-rs", "--random_state",
-                                  help="Innitialize the MDS and clustering algorithms with a random state for "
-                                       "consistent figures between runs.", default=random.randint(0, 1_000_000),
-                                  type=int, metavar="INT(OPTIONAL)")
+    dendogram_parser.add_argument("-c", "--clusters", help="If an automatic optimal clustering based on silhoute score "
+                                                           "should be included or not",
+                                  action="store_true")
     dendogram_parser.add_argument("-md", "--min_dist",
                                   help="The minimum distance an arm of the dendrogram is drawn. Since distances can be "
                                        "often 0 dendograms can look a bit strange. (default = 0.1)", default=0.1,
@@ -348,13 +336,6 @@ def add_all_parser(subparsers):
                             help="The minimum distance an arm of the dendrogram is drawn. Since distances can be "
                                  "often 0 dendograms can look a bit strange. (default = 0.1)", default=0.1,
                             metavar="FLOAT(OPTIONAL)", type=float)
-    all_parser.add_argument("-tp", "--type", help="The plot type you want. You can choose 'dendrogram' or 'MDS' or"
-                                                  "'both'. The default is 'dendrogram'",
-                            metavar="NAME(OPTIONAL)", choices=['dendrogram', 'MDS', 'both'], default='dendrogram')
-    all_parser.add_argument("-rs", "--random_state",
-                            help="Innitialize the MDS and clustering algorithms with a random state for "
-                                   "consistent figures between runs.", default=random.randint(0, 1_000_000),
-                            type=int, metavar="INT(OPTIONAL)")
     all_parser.add_argument("-mr", "--marker_rates", help="File with mutation rates of all markers present in "
                                                           "full marker file. The expected format is a csv file "
                                                           "with 2 columns 1. marker 2. rate. This will give more "
@@ -362,19 +343,12 @@ def add_all_parser(subparsers):
                                                           " the same mutation rate for all markers.",
                             metavar="FILE(OPTIONAL)", type=utility.check_in_file)
 
-    all_parser.add_argument("-c", "--clusters", help="The expected number of clusters for all pedigrees. This can"
-                                                     " be a single value to get the same number of clusters for"
-                                                     " all pedigrees or a list that will assign that number of "
-                                                     "clusters to a pedigree until the list is empty. The input "
-                                                     "can be a file with space seperated integers or typed out "
-                                                     "on the command line. If no value is provided the optimal "
-                                                     "clustering is calculated based on silhouette score.",
-                                  metavar="INT / FILE(OPTIONAL)", nargs="+", type=utility.check_file_int)
-
     all_parser.add_argument("-mm", "--minimum_mutations",
                             help="Minimum mutations that need to be present in order for the pedigree to be drawn"
                                  " (default=1).",
                             default=1, type=int, metavar="INT(OPTIONAL)")
+    all_parser.add_argument("-c", "--clusters", help="If an automatic optimal clustering based on silhoute score "
+                                                     "should be included or not", action="store_true")
 
 
 def add_simulation_parser(subparsers):

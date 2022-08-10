@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for drawing dendograms and MDS plots based on mutation differentiation.
+Module for drawing dendograms based on mutation differentiation.
 
 Author: Bram van Wersch
 
@@ -23,7 +23,6 @@ from collections import defaultdict
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 
-from sklearn.manifold import MDS
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score  # calinski_harabasz_score, davies_bouldin_score other options
 
@@ -58,10 +57,7 @@ def main(
     marker_rates_file = name_space.marker_rates
     outdir = Path(name_space.outdir)
     min_distance = name_space.min_dist
-    random_state = name_space.random_state
-    plot_choice = name_space.type
-    requested_clusters = name_space.clusters
-    cluster_list = get_requested_cluster_list(requested_clusters)
+    add_clustering = name_space.clusters
 
     with open(input_file) as f:
         lines = f.readlines()
@@ -70,34 +66,18 @@ def main(
 
     covered_lines = 0
     prev_total = 0
-    shown_cluster_warning = [False]
     for index, pedigree_lines in enumerate(get_pedigree_lines(lines)):
         pedigree_name = pedigree_lines[0][0]
 
         # decide number of clusters as defined by user
-        requested_cluster_nr = get_nr_of_clusters(cluster_list, index, shown_cluster_warning)
         dist_mat, colnames = get_distance_matrix(pedigree_lines, min_distance)
         pedigree_dir = create_pedigree_dir(outdir, pedigree_name)
 
-        # make sure the requested number of clusters is allowed
-        if requested_cluster_nr is not None and requested_cluster_nr > len(dist_mat):
-            LOG.error(f"The number of clusters can not be bigger than the number of datapoints. Got "
-                      f"{requested_cluster_nr} clusters for pedigree {pedigree_lines[0][1]}.")
-            raise utility.MalePedigreeToolboxError(f"The number of clusters can not be bigger than the number of"
-                                                   f" datapoints. Got {requested_cluster_nr} clusters for pedigree"
-                                                   f" {pedigree_lines[0][1]}.")
-
         # write the dendrogram
-        if plot_choice in ('dendrogram', 'both'):
-            LOG.debug(f"Writing dendogram for {pedigree_name}")
-            draw_dendrogram(dist_mat, colnames, pedigree_dir, pedigree_name, requested_cluster_nr)
-            LOG.debug(f"Finished making dendrogram plot for pedigree {pedigree_name}")
+        LOG.debug(f"Writing dendogram for {pedigree_name}")
+        draw_dendrogram(dist_mat, colnames, pedigree_dir, pedigree_name, add_clustering)
+        LOG.debug(f"Finished making dendrogram plot for pedigree {pedigree_name}")
 
-        # write the mds plot
-        if plot_choice in ('MDS', 'both'):
-            LOG.debug(f"Writing MDS for {pedigree_name}")
-            draw_write_mds(dist_mat, colnames, pedigree_dir, pedigree_name, random_state, requested_cluster_nr)
-            LOG.debug(f"Finished making MDS plot for pedigree {pedigree_name}")
         covered_lines += len(pedigree_lines)
 
         # update user periodically
@@ -107,7 +87,6 @@ def main(
             prev_total = total
 
     LOG.info("Finished drawing dendograms for all pedigrees that were present")
-
 
 @thread_termination.ThreadTerminable
 def get_requested_cluster_list(
@@ -131,29 +110,6 @@ def get_requested_cluster_list(
                                                            f" file {value}. Make sure that the cluster numbers are"
                                                            f" seperated by spaces.")
     return requested_cluser_numbers
-
-
-@thread_termination.ThreadTerminable
-def get_nr_of_clusters(
-    cluster_list: Union[None, List[int]],
-    current_index: int,
-    shown_cluster_warning: List[bool]
-) -> Union[None, List[int]]:
-    """Get the number of clusters that the user provided/expects for the current pedigree"""
-    if cluster_list is None:
-        requested_cluster_nr = None
-    elif len(cluster_list) == 1:
-        requested_cluster_nr = cluster_list[0]
-    else:
-        if current_index < len(cluster_list):
-            requested_cluster_nr = cluster_list[current_index]
-        else:
-            if not shown_cluster_warning[0]:
-                LOG.warning("Not all pedigrees have gotten a number of clusters assigned. Switching over to "
-                            "automatic calculation.")
-                shown_cluster_warning[0] = True
-            requested_cluster_nr = None
-    return requested_cluster_nr
 
 
 @thread_termination.ThreadTerminable
@@ -185,8 +141,8 @@ def adjust_fo_file_values(
         summary_dict[(first_id, second_id)] += mutations * get_weight(marker_rate_dict[values[4]])
         last_values = values
     # make sure to do the last one
-    for (first_id, second_id), mutation_wheight in summary_dict.items():
-        all_summary_lines.append([last_values[1], first_id, second_id, mutation_wheight])
+    for (id1, id2), mutation_wheight in summary_dict.items():
+        all_summary_lines.append([last_values[1], id1, id2, mutation_wheight])
     return all_summary_lines
 
 
@@ -249,7 +205,7 @@ def get_pedigree_lines(
     """Splits the input file based on pedigrees and returns connections of nodes and respective mutation
     differentiation"""
     dendogram_lines = [lists[0]]
-    for list_ in lists:
+    for list_ in lists[1:]:
         # a new dendogram begins
         if list_[0] != dendogram_lines[-1][0]:
             yield dendogram_lines
@@ -298,18 +254,19 @@ def draw_dendrogram(
     names: List[str],
     outdir: Path,
     pedigree_name: str,
-    requested_cluster_nr: Union[int, None]
+    add_clusters: bool
 ):
     """Draws the dendograms"""
     fig = plt.figure(num=1, clear=True)
     dists = squareform(dist_mat)
     linkage_matrix = linkage(dists, LINKAGE_METHOD)
-    if requested_cluster_nr is None:
+    if add_clusters:
         best_nr_clusters = max(find_optimal_clustering(dist_mat)) + 1
+        ct = linkage_matrix[-(best_nr_clusters-1), 2]
+        dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=ct)  # noqa
     else:
-        best_nr_clusters = requested_cluster_nr
-    ct = linkage_matrix[-(best_nr_clusters-1), 2]
-    dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=ct)  # noqa
+        dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=0,  # noqa
+                                   above_threshold_color='k')
 
     plt.title(f"Pedigree {pedigree_name}")
     out_path = outdir / f"{pedigree_name}_predicted_dendogram.png"
@@ -352,43 +309,6 @@ def get_cluster_colors(dendrogram_dct):
             if xi % 10 == 5:
                 colors[(int(xi) - 5) // 10] = c
     return colors
-
-
-@thread_termination.ThreadTerminable
-def draw_write_mds(
-    dist_mat: np.ndarray,
-    names: List[str],
-    outdir: Path,
-    pedigree_name: str,
-    random_state: int,
-    requested_cluster_nr: Union[int, None]
-):
-    """Draw an MDS plot"""
-    embedding = MDS(n_components=2, random_state=random_state)
-    new_points = embedding.fit_transform(dist_mat)
-    fig = plt.figure(num=1, clear=True)
-
-    if requested_cluster_nr is None:
-        best_labels = find_optimal_clustering(new_points)
-    else:
-        best_labels = AgglomerativeClustering(n_clusters=requested_cluster_nr,  # noqa
-                                              linkage=LINKAGE_METHOD).fit(new_points).labels_
-    plt.title(f"Pedigree {pedigree_name}")
-    plt.scatter(new_points[:, 0], new_points[:, 1], c=best_labels)
-
-    out_path = outdir / f"{pedigree_name}_predicted_multi_dimensional_plot.png"
-    plt.tight_layout()
-    fig.savefig(out_path)
-
-    clusters = [[] for _ in range(max(best_labels) + 1)]
-    for index, label in enumerate(best_labels):
-        clusters[label].append(names[index])  # noqa --> i dont know why pycharm
-
-    with open(outdir / f"{pedigree_name}_multi_dimensional_plot_clusters.txt", "w") as f:
-        for index, cluster in enumerate(clusters):
-            f.write(f"Cluser {index + 1}:\n")
-            f.write('\n'.join(cluster))
-            f.write("\n\n")
 
 
 @thread_termination.ThreadTerminable
