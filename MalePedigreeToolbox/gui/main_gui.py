@@ -38,20 +38,20 @@ def mpt_gui():
     layout = [
         [sg.Text("Male Pedigree Toolbox", font="Arial 18 bold", pad=(0, 0))],
         [sg.Text(f"Version: {__version__}", font="Arial 10", pad=(0, 0))],
-        [sg.Text("Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2021", font="Arial 10",
+        [sg.Text("Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2022", font="Arial 10",
                  pad=(0, 0))],
         [sg.Text("", font="Arial 10",
                  pad=(0, 0))],
         [sg.TabGroup([
-            [sg.Tab("distance", [[gui_parts.Column(distance_gui.layout, scrollable=True)]])],
-            [sg.Tab("mutation differentiation",
+            [sg.Tab("Pairwise distance", [[gui_parts.Column(distance_gui.layout, scrollable=True)]])],
+            [sg.Tab("Pairwise mutation",
                     [[gui_parts.Column(mutation_differentiation_gui.layout, scrollable=True)]])],
-            [sg.Tab("Pedigree mutation graph",
+            [sg.Tab("Pedigree mutation",
                     [[gui_parts.Column(infer_pedigree_mutations_gui.layout, scrollable=True)]])],
-            [sg.Tab("Predict pedigrees",
+            [sg.Tab("Dendrograms",
                     [[gui_parts.Column(predict_pedigrees_gui.layout, scrollable=True)]])],
-            [sg.Tab("Run it all", [[gui_parts.Column(all_gui.layout, scrollable=True)]])],
-            [sg.Tab("Predict generations", [[gui_parts.Column(predict_gui.layout, scrollable=True)]])],
+            [sg.Tab("Full analysis", [[gui_parts.Column(all_gui.layout, scrollable=True)]])],
+            [sg.Tab("Prediction", [[gui_parts.Column(predict_gui.layout, scrollable=True)]])],
         ], enable_events=True, key="mpt_tabs"
         )],
         [sg.Button("Start", key="start_button", button_color=("white", "green")),
@@ -88,8 +88,7 @@ class CommandThread(Thread):
         try:
             main.main(*self._arguments, is_gui=True)
         except BaseException as e:  # use base exception to catch system-exit calls
-            if "MalePedigreeToolboxError" not in str(e):
-                self.final_error = traceback.format_exc()
+            self.final_error = str(e)
 
 
 def run_main_command(values):
@@ -146,7 +145,7 @@ def run_main_command(values):
         temp.close()
         os.unlink(temp.name)
     except Exception as e:
-        print(f"failed to delete tep file with: {str(e)}")
+        print(f"failed to delete temp file with: {str(e)}")
         pass
     window.close()
 
@@ -154,21 +153,21 @@ def run_main_command(values):
 def get_command(values):
     arguments = ["-f"]
 
-    if values["mpt_tabs"] == "distance":
+    if values["mpt_tabs"] == "Pairwise distance":
         arguments += ["distances", "-t", values["tgf_folder_d"], "-o", values["output_d"]]
         output_dir = values["output_d"]
 
-    elif values["mpt_tabs"] == "mutation differentiation":
-        arguments += ["mut_diff", "-af", values["allele_md"], "-o", values["output_md"]]
+    elif values["mpt_tabs"] == "Pairwise mutation":
+        arguments += ["pairwise_mutation", "-af", values["allele_md"], "-o", values["output_md"]]
         if values["predict_file_md"] is True:
             arguments.append("-pf")
         if values["distance_md"] != '':
             arguments.extend(["-df", values["distance_md"]])
         output_dir = values["output_md"]
 
-    elif values["mpt_tabs"] == "Pedigree mutation graph":
+    elif values["mpt_tabs"] == "Pedigree mutation":
 
-        arguments += ["ped_mut_graph", "-af", values['allele_pmg'], "-t", values['tgf_folder_pmg'], "-o",
+        arguments += ["pedigree_mutation", "-af", values['allele_pmg'], "-t", values['tgf_folder_pmg'], "-o",
                       values['output_pmg']]
 
         mm_arg = values["minimum_mutations_pmg"]
@@ -177,46 +176,34 @@ def get_command(values):
 
         output_dir = values['output_pmg']
 
-    elif values["mpt_tabs"] == "Predict pedigrees":
-        arguments += ["predict_pedigrees", "-fm", values['full_marker_dp'], '-t', values['plot_choice_dp'],
-                      '-o', values['output_dp']]
+    elif values["mpt_tabs"] == "Dendrograms":
+        arguments += ["dendrograms", "-fm", values['full_marker_dp'], '-o', values['output_dp']]
         marker_rate_file = values['marker_rate_dp']
         if marker_rate_file != '':
             arguments += ['-mr', values['marker_rate_dp']]
 
-        random_state = values["random_state_dp"]
-        if random_state != '':
-            arguments += ['-rs', random_state]
-
-        cluster_arg = values['clusters_dp']
-        if cluster_arg != '':
-            arguments += ['-c', values['clusters_dp']]
+        if values['clusters_dp'] is True:
+            arguments.append("-c")
         output_dir = values['output_dp']
 
-    elif values["mpt_tabs"] == "Run it all":
-        arguments += ["all", "-t", values['tgf_folder_all'], '-af', values['allele_all'],
-                      '-tp', values['plot_choice_all'], '-o', values['output_all']]
+    elif values["mpt_tabs"] == "Full analysis":
+        arguments += ["all", "-t", values['tgf_folder_all'], '-af', values['allele_all'], '-o', values['output_all']]
         marker_rate_file = values['marker_rate_all']
         if marker_rate_file != '':
             arguments += ['-mr', values['marker_rate_all']]
-
-        random_state = values["random_state_dp"]
-        if random_state != '':
-            arguments += ['-rs', random_state]
 
         mm_arg = values["minimum_mutations_all"]
         if mm_arg != '':
             arguments += ["-mm", mm_arg]
 
-        cluster_arg = values['clusters_all']
-        if cluster_arg != '':
-            arguments += ['-c', values['clusters_all']]
+        if values['clusters_all'] is True:
+            arguments.append("-c")
 
         if values["predict_file_all"] is True:
             arguments.append("-pf")
         output_dir = values['output_all']
     elif values["mpt_tabs"] == "Predict generations":
-        arguments += ["predict_generations", "-i", values["input_pr"], "-o", values["output_pr"]]
+        arguments += ["prediction", "-i", values["input_pr"], "-o", values["output_pr"]]
         if values["custom_model_pr"] != '':
             if values["training_file_pr"] != '':
                 arguments.extend(["-tf", values["training_file_pr"]])

@@ -10,17 +10,14 @@ sg.theme("Lightgrey1")
 ped_mut_graph_frame = Frame(
     "Pedigree mutation graphs",
     layout=[
-        [sg.Text(
-            "Infer mutation events from pedigrees with incomplete allele data, in addition draw these pedigrees.",
-            size=(LINE_LENGTH, 3)
-        )],
+        [sg.Text("This module will use both the genotypic information as the pedigree information to estimate the total"
+                 " number of mutations that have occured within the pedigree. The module will visualize the infered"
+                 " mutations for each pedigree. Additional it will create a file with estimations of the"
+                 " locus-specific mutation rates based on all provided pedigrees together.", size=(LINE_LENGTH, 5))],
         [TextLabel("Allele file"),
          sg.InputText(key="allele_pmg", size=(HALFWAY_START_NR, 1)),
          sg.FileBrowse(key="allele_pmg")],
-        [sg.Text(
-            "File containing allele frequencies in CSV format.",
-            size=(LINE_LENGTH, 1)
-        )],
+        [sg.Text("File containing the pedigree, individual and genotypic information.", size=(LINE_LENGTH, 1))],
         [TextLabel("Tgf folder"),
          sg.InputText(size=(HALFWAY_START_NR, 1), key="tgf_folder_pmg"),
          sg.FolderBrowse(key="tgf_folder_pmg")],
@@ -38,7 +35,7 @@ ped_mut_graph_frame = Frame(
          sg.InputText(key="output_pmg", size=(HALFWAY_START_NR, 1)),
          sg.FolderBrowse(key="output_pmg")],
         [sg.Text(
-            "Folder path to store all outputs",
+            "Output directory for all files.",
             size=(LINE_LENGTH, 1)
         )]
     ],

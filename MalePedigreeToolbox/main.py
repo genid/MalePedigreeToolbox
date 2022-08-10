@@ -12,7 +12,6 @@ IMPORTANT: Python3.6 or higher needs to be used because some of the modules rely
 # library imports
 import argparse
 import logging
-import random
 from typing import Union
 import time
 import datetime
@@ -104,15 +103,15 @@ def main(*arguments, is_gui=False):
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import distances
         distances.main(name_space)
-    elif name_space.subcommand == "mut_diff":
+    elif name_space.subcommand == "pairwise_mutation":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import mutation_diff
         mutation_diff.main(name_space)
-    elif name_space.subcommand == "predict_pedigrees":
+    elif name_space.subcommand == "dendrograms":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import predict_pedigrees
         predict_pedigrees.main(name_space)
-    elif name_space.subcommand == "ped_mut_graph":
+    elif name_space.subcommand == "pedigree_mutation":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox import infer_pedigree_mutations
         infer_pedigree_mutations.main(name_space)
@@ -128,7 +127,7 @@ def main(*arguments, is_gui=False):
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox.generational_distance_prediction import make_models
         make_models.main(name_space)
-    elif name_space.subcommand == "predict_generations":
+    elif name_space.subcommand == "prediction":
         LOG.info("Loading libraries...")
         from MalePedigreeToolbox.generational_distance_prediction import classifier_predict
         classifier_predict.main(name_space)
@@ -241,23 +240,32 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
 def add_pairwise_distance_subparser(subparsers):
     pairwise_dist_parser = subparsers.add_parser("distances",
-                                                 help="Calultate the pairwise distance for all .tgf files in a folder")
+                                                 help="This module calculates the pairwise distances (in meioses) of "
+                                                      "all individuals in a predefined pedigree. The pedigree"
+                                                      " structure needs to be provided in TFG format as can be "
+                                                      "done easily using, e.g., yEd. Multiple TGF files in a single"
+                                                      " folder can be analyzed together. Individuals with genotypic"
+                                                      " data available need to receive a label, while individuals"
+                                                      " without genotypic data should remain unlabeled.")
     pairwise_dist_parser.add_argument("-t", "--tgf_folder",  required=True,
                                       help="Folder name containing at least 1 .tgf file.", metavar="PATH",
                                       type=utility.check_tgf_folder)
-    pairwise_dist_parser.add_argument("-o", "--outdir", help="Output folder name",
+    pairwise_dist_parser.add_argument("-o", "--outdir", help="Output directory for all files",
                                       required=True, metavar="PATH",
                                       type=lambda path: utility.check_create_out_folder(path, force=FORCE))
 
 
 def add_mutation_differentation_subparser(subparsers):
-    mutation_parser = subparsers.add_parser("mut_diff",
-                                            help="Calculate the number of mutations between all alleles of markers in "
-                                                 "a pedigree. Additionaly calculate mutation rates if distances between"
-                                                 " individuals in a pedigree are provided.")
-    mutation_parser.add_argument("-af", "--allele_file", help="File containing allele frequencies in CSV format",
+    mutation_parser = subparsers.add_parser("pairwise_mutation",
+                                            help="This module estimates the number of mutations that may have occured"
+                                                 " between each pair that belong to the same pedigree. When combined"
+                                                 " with the output file from the pairwise distance calculation this"
+                                                 " module will also calculate the differentiation rates. Lastly this"
+                                                 " module can produce an input file for the prediction module.")
+    mutation_parser.add_argument("-af", "--allele_file", help="File containing the pedigree, individual and "
+                                                              "genotypic information.",
                                  required=True, metavar="FILE", type=utility.check_in_file)
-    mutation_parser.add_argument("-df", "--dist_file", help="File of distances between samples.This can be "
+    mutation_parser.add_argument("-df", "--dist_file", help="File of distances between samples. This can be "
                                                             "generated with the help of the 'distances' command",
                                  metavar="FILE(OPTIONAL)", type=utility.check_in_file)
     mutation_parser.add_argument("-pf", "--prediction_file", help="Add this option if you want a file to be generated"
@@ -265,16 +273,21 @@ def add_mutation_differentation_subparser(subparsers):
                                                                   " predict generational distance between individuals "
                                                                   "in a pedigree.",
                                  action="store_true")
-    mutation_parser.add_argument("-o", "--outdir", help="Output dir for all the resulting files",
+    mutation_parser.add_argument("-o", "--outdir", help="Output directory for all files",
                                  type=lambda path: utility.check_create_out_folder(path, force=FORCE),
                                  metavar="PATH", required=True)
 
 
 def add_infer_pedigree_mutations_parser(subparsers):
-    pedigree_parser = subparsers.add_parser("ped_mut_graph",
-                                            help="Infer mutation events from pedigrees with incomplete allele data, "
-                                                 "in addition draw these pedigrees.")
-    pedigree_parser.add_argument("-af", "--allele_file", help="File containing allele frequencies in CSV format",
+    pedigree_parser = subparsers.add_parser("pedigree_mutation",
+                                            help="This module will use both the genotypic information as the pedigree"
+                                                 " information to estimate the total number of mutations that have"
+                                                 " occured within the pedigree. The module will visualize the infered"
+                                                 " mutations for each pedigree. Additional it will create a file with"
+                                                 " estimations of the locus-specific mutation rates based on all"
+                                                 " provided pedigrees together.")
+    pedigree_parser.add_argument("-af", "--allele_file", help="File containing the pedigree, individual and genotypic"
+                                                              " information.",
                                  required=True, metavar="FILE", type=utility.check_in_file)
     pedigree_parser.add_argument("-t", "--tgf_folder",  required=True,
                                  help="Folder name containing at least 1 .tgf file.", metavar="PATH",
@@ -284,26 +297,26 @@ def add_infer_pedigree_mutations_parser(subparsers):
                                       " (default=1).",
                                  default=1, type=int, metavar="INT(OPTIONAL)")
     pedigree_parser.add_argument("-o", "--outdir", required=True,
-                                 help="Folder path to store all outputs", metavar="PATH",
+                                 help="Output directory for all files", metavar="PATH",
                                  type=lambda path: utility.check_create_out_folder(path, force=FORCE))
 
 
 def add_dendogram_parser(subparsers):
-    dendogram_parser = subparsers.add_parser("predict_pedigrees",
-                                             help="Predict most likely closest related people based on mutation "
-                                                  "distances in a pedigree, this can be dendrograms or "
-                                                  "multi-dimensional scaling plots.")
+    dendogram_parser = subparsers.add_parser("dendrograms",
+                                             help="This module will draw dendrograms for each pedigree and based on"
+                                                  " the pairwise mutations. These dendrograms can help to determine"
+                                                  " the position of an unknown patrilineal relative in a pedigree."
+                                                  " The dendrograms can also be used in population genetics."
+                                                  " The dendrograms can be weighted by providing a file with the"
+                                                  " mutation rates of the included Y-STRs.")
     dendogram_parser.add_argument("-fm", "--full_marker_csv", help="The file containing full mutation "
                                                                    "differentiations (-fo / full_out.csv)"
                                                                    " generated with the mut_diff command",
                                   required=True, metavar="FILE", type=utility.check_in_file)
-    dendogram_parser.add_argument("-mr", "--marker_rates", help="File with mutation rates of all markers present in "
-                                                                "full marker file. The expected format is a csv file "
-                                                                "with 2 columns 1. marker 2. rate. This will give more "
-                                                                "accurate dendrograms. Leave this field empty to assume"
-                                                                " the same mutation rate for all markers.",
+    dendogram_parser.add_argument("-mr", "--mutation_rates", help="A csv file with two colums containing the marker"
+                                                                  " name and mutation rate of each Y-STR",
                                   metavar="FILE", type=utility.check_in_file)
-    dendogram_parser.add_argument("-o", "--outdir", help="Folder path to store all outputs",
+    dendogram_parser.add_argument("-o", "--outdir", help="Output directory for all files",
                                   required=True, metavar="PATH",
                                   type=lambda path: utility.check_create_out_folder(path, force=FORCE))
     dendogram_parser.add_argument("-c", "--clusters", help="If an automatic optimal clustering based on silhoute score "
@@ -323,9 +336,10 @@ def add_all_parser(subparsers):
     all_parser.add_argument("-t", "--tgf_folder",  required=True,
                             help="Folder name containing at least 1 .tgf file.", metavar="PATH",
                             type=utility.check_tgf_folder)
-    all_parser.add_argument("-af", "--allele_file", help="File containing allele frequencies in CSV format",
+    all_parser.add_argument("-af", "--allele_file", help="File containing the pedigree, individual and genotypic"
+                                                         " information.",
                             required=True, metavar="FILE", type=utility.check_in_file)
-    all_parser.add_argument("-o", "--outdir", help="Output directory where all information will end up",
+    all_parser.add_argument("-o", "--outdir", help="Output directory for all files",
                             required=True, metavar="PATH",
                             type=lambda path: utility.check_create_out_folder(path, force=FORCE))
     all_parser.add_argument("-pf", "--prediction_file", help="Add this option if you want a file to be generated"
@@ -336,11 +350,8 @@ def add_all_parser(subparsers):
                             help="The minimum distance an arm of the dendrogram is drawn. Since distances can be "
                                  "often 0 dendograms can look a bit strange. (default = 0.1)", default=0.1,
                             metavar="FLOAT(OPTIONAL)", type=float)
-    all_parser.add_argument("-mr", "--marker_rates", help="File with mutation rates of all markers present in "
-                                                          "full marker file. The expected format is a csv file "
-                                                          "with 2 columns 1. marker 2. rate. This will give more "
-                                                          "accurate dendrograms. Leave this field empty to assume"
-                                                          " the same mutation rate for all markers.",
+    all_parser.add_argument("-mr", "--mutation_rates", help="A csv file with two colums containing the marker name and"
+                                                            " mutation rate of each Y-STR",
                             metavar="FILE(OPTIONAL)", type=utility.check_in_file)
 
     all_parser.add_argument("-mm", "--minimum_mutations",
@@ -361,7 +372,7 @@ def add_simulation_parser(subparsers):
                                    help="Excel or csv file containing mutation rates", metavar="FILE", required=True,
                                    type=utility.check_in_file)
     simulation_parser.add_argument("-o", "--outdir", dest="outdir",
-                                   help="Folder for table of simulated mutations in csv format", metavar="PATH",
+                                   help="Output directory for all files", metavar="PATH",
                                    required=True,
                                    type=lambda path: utility.check_create_out_folder(path, force=FORCE))
 
@@ -386,8 +397,7 @@ def add_make_models_parser(subparsers):
                                          " to very poor models.",
                                     metavar="FILE", required=True, type=utility.check_in_file)
     make_models_parser.add_argument("-o", "--outdir", dest="outdir",
-                                    help="Folder where the final models, evaluation parameters and evaluation figures "
-                                         "are placed.", metavar="FOLDER", required=True,
+                                    help="Output directory for all files", metavar="FOLDER", required=True,
                                     type=lambda path: utility.check_create_out_folder(path, force=FORCE))
     make_models_parser.add_argument("-mt", "--model_types",
                                     help="The different types of models to create a predictor for. The predictor is "
@@ -414,7 +424,7 @@ def add_make_models_parser(subparsers):
 
 
 def add_predict_parser(subparsers):
-    predict_parser = subparsers.add_parser("predict_generations",
+    predict_parser = subparsers.add_parser("prediction",
                                            help="Predict the generational distance between 2 individuals based on the "
                                                 "number of mutations between them.")
     predict_parser.add_argument("-i", "--input",
@@ -444,7 +454,7 @@ def add_predict_parser(subparsers):
                                                       "confidence. If a lot of values are predicted a lot of plots are "
                                                       "generated, so be warned, it can take a while.",
                                 action="store_true")
-    predict_parser.add_argument("-o", "--outdir", help="Output directory", metavar="PATH", required=True,
+    predict_parser.add_argument("-o", "--outdir", help="Output directory for all files", metavar="PATH", required=True,
                                 type=lambda path: utility.check_create_out_folder(path, force=FORCE))
 
 

@@ -11,13 +11,13 @@ class Test(TestCase):
         create_temp_out()
 
     def tearDown(self) -> None:
-        # clean_temp_out()
-        pass
+        clean_temp_out()
+        # pass
 
     @classmethod
     def tearDownClass(cls):
-        # clean_log_files()
-        pass
+        clean_log_files()
+        # pass
 
     def test_distance_command(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'

@@ -8,7 +8,7 @@ sg.theme("Lightgrey1")
 
 
 all_frame = Frame(
-    "Run it all",
+    "Full analysis",
     layout=[
         [sg.Text(
             "Performs all of the commands in order, first calculating distance,than mutation differentiation, "
@@ -27,39 +27,24 @@ all_frame = Frame(
          sg.InputText(key="allele_all", size=(HALFWAY_START_NR, 1)),
          sg.FileBrowse(key="allele_all")],
         [sg.Text(
-            "File containing allele frequencies in CSV format.",
+            "File containing the pedigree, individual and genotipic information.",
             size=(LINE_LENGTH, 1)
         )],
-        [TextLabel("Marker rate file (optional)"),
+        [TextLabel("Mutation rate file (optional)"),
          sg.InputText(size=(HALFWAY_START_NR, 1), key="marker_rate_all"),
          sg.FileBrowse(key="marker_rate_all")],
         [sg.Text(
-            "File with mutation rates of all markers present in full marker file. The expected format is a csv file "
-            "with 2 columns 1. marker 2. rate. This will give more accurate dendrograms. Leave this field empty to "
-            "assume the same mutation rate for all markers.",
-            size=(LINE_LENGTH, 3)
+            "A .csv file with two columns containing the marker name and mutation rate of each Y-STR.",
+            size=(LINE_LENGTH, 2)
         )],
-        [TextLabel("Plot choice"),
-         sg.Combo(values=["dendrogram", "MDS", 'both'], key="plot_choice_all", readonly=True,
-                  default_value='dendrogram')],
+        [TextLabel("Include optimal clustering"),
+         sg.Checkbox(
+             "",
+             key=f'clusters_all',
+             enable_events=True)],
         [sg.Text(
-            "The plot type you want.",
-            size=(LINE_LENGTH, 1)
-        )],
-        [TextLabel("Nr. of clusters (optional)"),
-         sg.InputText(size=(HALFWAY_START_NR, 1), key="clusters_all"),
-         sg.FileBrowse(key="clusters_all")],
-        [sg.Text(
-            "The expected number of clusters for all pedigrees. This can be a single value to get the same number of"
-            " clusters for all pedigrees or a text file containing space separated positive integers. If"
-            " no value is provided the optimal clustering is calculated based on silhouette score.",
-            size=(LINE_LENGTH, 4)
-        )],
-        [TextLabel("Random state (optional)"),
-         sg.InputText(size=(HALFWAY_START_NR, 1), key="random_state_all")],
-        [sg.Text(
-            "An integer representing a random start state for the MDS plot. This will ensure that consecutive runs on"
-            " the same data provide the same plot.",
+            "Check the box if you want to color the optimal number of clusters in the dendrogram based on silhoute "
+            "score",
             size=(LINE_LENGTH, 2)
         )],
         [TextLabel("Minimum mut. (optional)"),
@@ -73,16 +58,11 @@ all_frame = Frame(
              "",
              key=f'predict_file_all',
              enable_events=True)],
-        [sg.Text(
-            "Add this option if you want a file to be generated that can be used by the predict command in order to"
-            " predict generational distance between individuals in a pedigree.",
-            size=(LINE_LENGTH, 2)
-        )],
         [TextLabel("Output folder"),
          sg.InputText(key="output_all", size=(HALFWAY_START_NR, 1)),
          sg.FolderBrowse(key="output_all")],
         [sg.Text(
-            "Folder path to store all outputs",
+            "Output directory for all files.",
             size=(LINE_LENGTH, 1)
         )]
     ],

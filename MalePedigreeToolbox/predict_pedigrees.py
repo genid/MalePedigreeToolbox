@@ -88,6 +88,7 @@ def main(
 
     LOG.info("Finished drawing dendograms for all pedigrees that were present")
 
+
 @thread_termination.ThreadTerminable
 def get_requested_cluster_list(
     requested_clusters: Union[str, None]

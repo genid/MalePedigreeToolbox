@@ -13,7 +13,7 @@ predict_frame = Frame(
         [sg.Text(
             "Predict the generational distance between 2 individuals based on the "
             "number of mutations between them.",
-            size=(LINE_LENGTH, 2)
+            size=(LINE_LENGTH, 3)
         )],
         [TextLabel("Input file"),
          sg.InputText(key="input_pr", size=(HALFWAY_START_NR, 1)),
@@ -24,16 +24,11 @@ predict_frame = Frame(
             "the mut_diff command instead.",
             size=(LINE_LENGTH, 2)
         )],
-        [TextLabel("Model choice"),
-         sg.Combo(values=["RMPLEX", "PPY23", "YFP", "PPY23_RMPLEX", "YFP_RMPLEX"], key="model_choice_pr", readonly=True,
-                  default_value='RMPLEX')],
+        [TextLabel("Prediction model (opt)"),
+         sg.Combo(values=["RMPLEX", "PPY23", "YFP", "PPY23_RMPLEX", "YFP_RMPLEX", "YFORGEN", "YFORGEN_RMPLEX"],
+                  key="model_choice_pr", readonly=True, default_value='RMPLEX', size=(18, 1))],
         [sg.Text(
-            "Choose an already calculated model based on a 5 million datapoints dataset. "
-            "The names of the models refer to sets of markers used when creating the models."
-            " If you want to know if your set applies to a model try it out and an error will"
-            " be raised if not all required markers are present.",
-            size=(LINE_LENGTH, 3)
-        )],
+            "Select a pre - made prediction model, or select a custom model below.", size=(LINE_LENGTH, 3))],
         [TextLabel("Custom model (optional)"),
             sg.InputText(key="custom_model_pr", size=(HALFWAY_START_NR, 1)),
             sg.FileBrowse(key="custom_model_pr")],
@@ -50,18 +45,13 @@ predict_frame = Frame(
             " be specified when using a custom model",
             size=(LINE_LENGTH, 2)
         )],
-        [TextLabel("Include probability plots"),
+        [TextLabel("Include plots"),
          sg.Checkbox(
              "",
              key='plots_pr',
              enable_events=True)],
-        [sg.Text(
-            "Specify this argument if all comparissons in the input file "
-            "should be plotted, showing the age range at 85, 95 and 99 % "
-            "confidence. If a lot of values are predicted a lot of plots are "
-            "generated, so be warned, it can take a while.",
-            size=(LINE_LENGTH, 3)
-        )],
+        [sg.Text("Warning! If many comparisons are made, selecting this option will use a lot of resouces and it will "
+                 "significantly extend the running time.", size=(LINE_LENGTH, 3))],
         [TextLabel("Outdir"),
          sg.InputText(key="output_pr", size=(HALFWAY_START_NR, 1)),
          sg.FolderBrowse(key="output_pr")],
