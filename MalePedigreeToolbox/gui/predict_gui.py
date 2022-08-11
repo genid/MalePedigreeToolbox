@@ -21,7 +21,7 @@ predict_frame = Frame(
         [sg.Text(
             "Mutation rates table to predict. Columns are marker names, Rows as"
             " samples in CSV or TSV format. This file can be generated from pedigrees trough "
-            "the mut_diff command instead.",
+            "the pairwise_mutation command instead.",
             size=(LINE_LENGTH, 2)
         )],
         [TextLabel("Prediction model (opt)"),

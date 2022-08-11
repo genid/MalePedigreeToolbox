@@ -34,6 +34,9 @@ else:
     raise SystemExit("Can not find application path.")
 
 
+TESTING = False
+
+
 def mpt_gui():
     layout = [
         [sg.Text("Male Pedigree Toolbox", font="Arial 18 bold", pad=(0, 0))],
@@ -88,7 +91,10 @@ class CommandThread(Thread):
         try:
             main.main(*self._arguments, is_gui=True)
         except BaseException as e:  # use base exception to catch system-exit calls
-            self.final_error = str(e)
+            if TESTING:
+                self.final_error = traceback.format_exc()
+            else:
+                self.final_error = f"Execution failed with message: {str(e)}."
 
 
 def run_main_command(values):
@@ -202,7 +208,7 @@ def get_command(values):
         if values["predict_file_all"] is True:
             arguments.append("-pf")
         output_dir = values['output_all']
-    elif values["mpt_tabs"] == "Predict generations":
+    elif values["mpt_tabs"] == "Prediction":
         arguments += ["prediction", "-i", values["input_pr"], "-o", values["output_pr"]]
         if values["custom_model_pr"] != '':
             if values["training_file_pr"] != '':

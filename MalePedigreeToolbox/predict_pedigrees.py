@@ -54,7 +54,7 @@ def main(
     """Main entry point for this module"""
     LOG.info("Starting with creating dendograms based on mutation differentiation")
     input_file = name_space.full_marker_csv
-    marker_rates_file = name_space.marker_rates
+    marker_rates_file = name_space.mutation_rates
     outdir = Path(name_space.outdir)
     min_distance = name_space.min_dist
     add_clustering = name_space.clusters
@@ -139,7 +139,11 @@ def adjust_fo_file_values(
             for (id1, id2), mutation_wheight in summary_dict.items():
                 all_summary_lines.append([last_values[1], id1, id2, mutation_wheight])
             summary_dict = defaultdict(int)
-        summary_dict[(first_id, second_id)] += mutations * get_weight(marker_rate_dict[values[4]])
+        try:
+            summary_dict[(first_id, second_id)] += mutations * get_weight(marker_rate_dict[values[4]])
+        except KeyError:
+            LOG.error(f"Missing rate for marker {values[4]} in marker rates file.")
+            raise utility.MalePedigreeToolboxError(f"Missing rate for marker {values[4]} in marker rates file.")
         last_values = values
     # make sure to do the last one
     for (id1, id2), mutation_wheight in summary_dict.items():

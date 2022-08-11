@@ -705,8 +705,11 @@ def run(
     if distance_file is not None:
         # read the distance file
         LOG.info("Started with summarising and writing meiosis differentiation rates to file")
-        distance_dict = read_distance_file(distance_file)
-        write_differentiation_rates(all_information_list, distance_dict, outdir / DIFFERENTIATION_OUT)
+        try:
+            distance_dict = read_distance_file(distance_file)
+            write_differentiation_rates(all_information_list, distance_dict, outdir / DIFFERENTIATION_OUT)
+        except Exception as e:
+            LOG.warning(f"Failed to calculate differentiation rates with the following error message: {str(e)}")
 
     if include_predict_file:
         with open(outdir / PREDICT_OUT, "w") as f:
@@ -720,4 +723,4 @@ def run(
 
 if __name__ == '__main__':
     print(get_mutation_diff(Allele([48, 66.1]), Allele([48, 66.1, 67.1]), 3))
-    #print(get_mutation_diff(Allele([58.2, 60.2, 64]), Allele([58.2, 61, 64]), 4))
+    # print(get_mutation_diff(Allele([58.2, 60.2, 64]), Allele([58.2, 61, 64]), 4))

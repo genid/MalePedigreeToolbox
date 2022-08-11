@@ -10,7 +10,7 @@ sg.theme("Lightgrey1")
 draw_pedigree_frame = Frame(
     "Create dendrograms",
     layout=[
-        [sg.Text("This module will draw dendrograms for each pedigree and based on the pairwise mutations. These"
+        [sg.Text("This module will draw dendrograms for each pedigree based on the pairwise mutations. These"
                  " dendrograms can help to determine the position of an unknown patrilineal relative in a pedigree."
                  " The dendrograms can also be used in population genetics. The dendrograms can be weighted by"
                  " providing a file with the mutation rates of the included Y-STRs.", size=(LINE_LENGTH, 5))],

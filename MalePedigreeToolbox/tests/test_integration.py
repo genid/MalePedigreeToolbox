@@ -28,7 +28,7 @@ class Test(TestCase):
 
     def test_mutation_diff_command(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent mut_diff -af "{TEST_FILE_DIR / "alleles_small.csv"}" -df ' \
+        command = f'mpt -f -ll silent pairwise_mutation -af "{TEST_FILE_DIR / "alleles_small.csv"}" -df ' \
                   f'"{TEST_FILE_DIR / "distances_mut_diff_test.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "full_out.csv", output_dir / "summary_out.csv",
@@ -39,7 +39,7 @@ class Test(TestCase):
 
     def test_infer_pedigree_mutations(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent ped_mut_graph -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
+        command = f'mpt -f -ll silent pedigree_mutation -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
                   f'"{TEST_FILE_DIR / "infer_ped_mut_alleles.csv"}"' \
                   f' -o "{output_dir}"'
         run_command(command)
@@ -66,7 +66,7 @@ class Test(TestCase):
 
     def test_predict_pedigrees(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent predict_pedigrees -c -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
+        command = f'mpt -f -ll silent dendrograms -c -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt"),
