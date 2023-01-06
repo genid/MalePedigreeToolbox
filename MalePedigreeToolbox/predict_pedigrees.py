@@ -305,7 +305,7 @@ def draw_dendrogram(
 
 
 def get_cluster_colors(dendrogram_dct):
-    # solution that works for python 3.6 from, can be slightly wrong unfortunately
+    # solution that works for python 3.6, can be slightly wrong unfortunately
     # https://stackoverflow.com/questions/61959602/retrieve-leave-colors-from-scipy-dendrogram/61964297#61964297
     points = dendrogram_dct['leaves']
     colors = ['none'] * len(points)

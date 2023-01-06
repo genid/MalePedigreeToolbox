@@ -210,7 +210,7 @@ class FullPedigreeNode:
 
     def add_allele(self, allele, marker):
         if isinstance(allele, list):
-            allele = mutation_diff.Allele(allele)
+            allele = mutation_diff.Locus(allele)
         self.alleles[marker] = allele
 
     def allele_id(self):
@@ -282,7 +282,7 @@ class PedigreeMarkerGraph:
         node.set_sample(None)
         del self.sample_node_mapping[sample_name]
 
-    def add_allele(self, node: "PedigreeNode", allele: Union[List[int], mutation_diff.Allele]):
+    def add_allele(self, node: "PedigreeNode", allele: Union[List[int], mutation_diff.Locus]):
         node.set_allele(allele)
         self.alleles.add(node.allele)
 
@@ -340,7 +340,7 @@ class PedigreeMarkerGraph:
 class PedigreeNode:
     """tracks information for a node in the pedigree graph"""
 
-    allele: Union[mutation_diff.Allele, None]
+    allele: Union[mutation_diff.Locus, None]
 
     def __init__(self, id_):
         self.id = id_
@@ -350,9 +350,9 @@ class PedigreeNode:
     def set_sample(self, sample):
         self.sample = sample
 
-    def set_allele(self, allele: Union[List[int], mutation_diff.Allele]):
+    def set_allele(self, allele: Union[List[int], mutation_diff.Locus]):
         if isinstance(allele, list) or isinstance(allele, tuple):
-            self.allele = mutation_diff.Allele(allele)
+            self.allele = mutation_diff.Locus(allele)
         else:
             self.allele = allele
 
@@ -508,7 +508,7 @@ def estimate_allele_changes(
 @thread_termination.ThreadTerminable
 def estimate_unknown_alleles(
     pedigree_marker_graph: "PedigreeMarkerGraph",
-    needed_allele_changes: Dict["PedigreeNode", Dict[mutation_diff.Allele, int]]
+    needed_allele_changes: Dict["PedigreeNode", Dict[mutation_diff.Locus, int]]
 ):
     """Estimate allelels based on the number of estimated allele changes for all possible alleles for a node without
     known allele
@@ -545,7 +545,7 @@ def estimate_unknown_alleles(
 @thread_termination.ThreadTerminable
 def set_alleles(
     pedigree_marker_graph: "PedigreeMarkerGraph",
-    needed_allele_changes: Dict["PedigreeNode", Dict[mutation_diff.Allele, int]],
+    needed_allele_changes: Dict["PedigreeNode", Dict[mutation_diff.Locus, int]],
     base_node: "PedigreeNode",
     expected_allele_number: int
 ) -> int:
@@ -777,9 +777,9 @@ def plot_full_pedigree(
 
 
 def format_allele(
-    allele: Union[Tuple[float], mutation_diff.Allele]
+    allele: Union[Tuple[float], mutation_diff.Locus]
 ) -> str:
-    if isinstance(allele, mutation_diff.Allele):
+    if isinstance(allele, mutation_diff.Locus):
         allele = allele.components
     allele_string_list = []
     for number in allele:
