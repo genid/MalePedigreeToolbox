@@ -28,12 +28,12 @@ predict_frame = Frame(
          sg.Combo(values=["RMPLEX", "PPY23", "YFP", "PPY23_RMPLEX", "YFP_RMPLEX", "YFORGEN", "YFORGEN_RMPLEX"],
                   key="model_choice_pr", readonly=True, default_value='RMPLEX', size=(18, 1))],
         [sg.Text(
-            "Select a pre - made prediction model, or select a custom model below.", size=(LINE_LENGTH, 3))],
+            "Select a pre-made prediction model, or select a custom model below.", size=(LINE_LENGTH, 2))],
         [TextLabel("Custom model (optional)"),
             sg.InputText(key="custom_model_pr", size=(HALFWAY_START_NR, 1)),
             sg.FileBrowse(key="custom_model_pr")],
         [sg.Text(
-            "A path leading to a joblib dumped model. If a cutom model is provided the model choice is ignored",
+            "A path leading to a joblib dumped model. If a custom model is provided the model choice is ignored",
             size=(LINE_LENGTH, 1)
         )],
         [TextLabel("Training file (optional)"),

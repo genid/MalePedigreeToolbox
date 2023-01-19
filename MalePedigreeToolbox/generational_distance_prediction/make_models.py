@@ -212,18 +212,6 @@ def mlp_params2() -> Dict[str, Any]:
     }
 
 
-def mlp_params() -> Dict[str, Any]:
-    return {
-        "learning_rate": ['constant', 'invscaling', 'adaptive'],
-        "solver": ["adam"],
-        "activation": ["identity", "logistic", "tanh", "relu"],
-        "alpha": np.linspace(0.00001, 0.1, 1000),
-        "beta_1": np.linspace(0.5, 0.99, 50),
-        "beta_2": np.linspace(0.99, 0.99, 1000),
-        "max_iter": [1000]
-    }
-
-
 def lm_params() -> Dict[str, Any]:
     return {
         "solver": ["svd", "lsqr", "eigen"],
@@ -257,6 +245,5 @@ ESTIMATORS = {"KNN": (KNeighborsClassifier, knn_params()),
               "QDA": (QuadraticDiscriminantAnalysis, quadratic_params()),
               "RF": (RandomForestClassifier, rf_params()),
               "Gaussian": (GaussianNB, guassian_params()),
-              "MLP": (MLPClassifier, mlp_params()),
-              "MLP2": (MLPClassifier, mlp_params2()),
+              "MLP": (MLPClassifier, mlp_params2()),
               "SVM": (SVC, svm_params())}
