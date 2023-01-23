@@ -319,9 +319,9 @@ def add_dendogram_parser(subparsers):
     dendogram_parser.add_argument("-o", "--outdir", help="Output directory for all files",
                                   required=True, metavar="PATH",
                                   type=lambda path: utility.check_create_out_folder(path, force=FORCE))
-    dendogram_parser.add_argument("-c", "--clusters", help="If an automatic optimal clustering based on silhoute score "
-                                                           "should be included or not",
-                                  action="store_true")
+    dendogram_parser.add_argument("-c", "--clusters", help="An integer for the number of clusters or 'opt' for the "
+                                                           "optimal clustering based on solhoute score. "
+                                                           "(default = 0)", metavar="STRING", default="0")
     dendogram_parser.add_argument("-md", "--min_dist",
                                   help="The minimum distance an arm of the dendrogram is drawn. Since distances can be "
                                        "often 0 dendograms can look a bit strange. (default = 0.1)", default=0.1,
@@ -358,8 +358,9 @@ def add_all_parser(subparsers):
                             help="Minimum mutations that need to be present in order for the pedigree to be drawn"
                                  " (default=1).",
                             default=1, type=int, metavar="INT(OPTIONAL)")
-    all_parser.add_argument("-c", "--clusters", help="If an automatic optimal clustering based on silhoute score "
-                                                     "should be included or not", action="store_true")
+    all_parser.add_argument("-c", "--clusters", help="An integer for the number of clusters or 'opt' for the "
+                                                     "optimal clustering based on solhoute score. "
+                                                     "(default = 0)", metavar="STRING", default="0")
 
 
 def add_simulation_parser(subparsers):

@@ -28,14 +28,11 @@ draw_pedigree_frame = Frame(
             "A .csv file with two columns containing the marker name and mutation rate of each Y-STR.",
             size=(LINE_LENGTH, 2)
         )],
-        [TextLabel("Include optimal clustering"),
-         sg.Checkbox(
-             "",
-             key=f'clusters_dp',
-             enable_events=True)],
+        [TextLabel("Nr. of clusters (optional)"),
+         sg.InputText(size=(HALFWAY_START_NR, 1), key="clusters_dp")],
         [sg.Text(
-            "Check the box if you want to color the optimal number of clusters in the dendrogram based on silhoute "
-            "score",
+            "The number of clusters you want each dendogram to be divided in or type 'opt' for the optimal clustering "
+            "based on silhoute score.",
             size=(LINE_LENGTH, 2)
         )],
         [TextLabel("Output folder"),

@@ -188,8 +188,8 @@ def get_command(values):
         if marker_rate_file != '':
             arguments += ['-mr', values['marker_rate_dp']]
 
-        if values['clusters_dp'] is True:
-            arguments.append("-c")
+        if values['clusters_dp'] != "":
+            arguments += ["-c", values['clusters_dp']]
         output_dir = values['output_dp']
 
     elif values["mpt_tabs"] == "Full analysis":
@@ -202,8 +202,8 @@ def get_command(values):
         if mm_arg != '':
             arguments += ["-mm", mm_arg]
 
-        if values['clusters_all'] is True:
-            arguments.append("-c")
+        if values['clusters_all'] != "":
+            arguments += ["-c", values['clusters_dp']]
 
         if values["predict_file_all"] is True:
             arguments.append("-pf")

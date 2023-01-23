@@ -57,7 +57,7 @@ def main(
     marker_rates_file = name_space.mutation_rates
     outdir = Path(name_space.outdir)
     min_distance = name_space.min_dist
-    add_clustering = name_space.clusters
+    expected_nr_of_clusters = name_space.clusters
 
     with open(input_file) as f:
         lines = f.readlines()
@@ -75,7 +75,7 @@ def main(
 
         # write the dendrogram
         LOG.debug(f"Writing dendogram for {pedigree_name}")
-        draw_dendrogram(dist_mat, colnames, pedigree_dir, pedigree_name, add_clustering)
+        draw_dendrogram(dist_mat, colnames, pedigree_dir, pedigree_name, expected_nr_of_clusters)
         LOG.debug(f"Finished making dendrogram plot for pedigree {pedigree_name}")
 
         covered_lines += len(pedigree_lines)
@@ -259,15 +259,31 @@ def draw_dendrogram(
     names: List[str],
     outdir: Path,
     pedigree_name: str,
-    add_clusters: bool
+    expected_nr_of_clusters: str
 ):
     """Draws the dendograms"""
     fig = plt.figure(num=1, clear=True)
     dists = squareform(dist_mat)
     linkage_matrix = linkage(dists, LINKAGE_METHOD)
-    if add_clusters:
+    if expected_nr_of_clusters == "opt":
         best_nr_clusters = max(find_optimal_clustering(dist_mat)) + 1
         ct = linkage_matrix[-(best_nr_clusters-1), 2]
+    else:
+        try:
+            expected_nr = int(expected_nr_of_clusters)
+        except ValueError:
+            LOG.error(f"Invalid integer provided for the number of clusters: '{expected_nr_of_clusters}'.")
+            raise utility.MalePedigreeToolboxError(f"Invalid integer provided for the number of clusters:"
+                                                   f" '{expected_nr_of_clusters}'.")
+        if expected_nr > len(dist_mat):
+            raise utility.MalePedigreeToolboxError(f"The number of clusters can not be bigger than the number of"
+                                                   f" datapoints. Got {expected_nr} clusters for pedigree"
+                                                   f" {pedigree_name} with {len(dist_mat)} datapoints.")
+        if expected_nr == 0:
+            ct = 0
+        else:
+            ct = linkage_matrix[-(expected_nr-1), 2]
+    if ct > 0:
         dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=ct)  # noqa
     else:
         dendogram_dct = dendrogram(linkage_matrix, labels=names, leaf_rotation=90, color_threshold=0,  # noqa

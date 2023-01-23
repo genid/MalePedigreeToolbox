@@ -66,7 +66,7 @@ class Test(TestCase):
 
     def test_predict_pedigrees(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent dendrograms -c -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
+        command = f'mpt -f -ll silent dendrograms -c opt -fm "{TEST_FILE_DIR / "expected_fo.csv"}" ' \
                   f'-mr "{TEST_FILE_DIR / "marker_rates.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "Draulans" / "Draulans_dendogram_clusters.txt"),
@@ -78,7 +78,7 @@ class Test(TestCase):
 
     def test_all(self):
         output_dir = TEMP_OUT_DIR / 'test_outdir'
-        command = f'mpt -f -ll silent all -c -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
+        command = f'mpt -f -ll silent all -c opt -t "{TEST_FILE_DIR / "infer_pedigree_tgfs"}" -af ' \
                   f'"{TEST_FILE_DIR / "infer_ped_mut_alleles.csv"}" -o "{output_dir}"'
         run_command(command)
         self.assertTrue(confirm_files_exist(output_dir / "differentiation_out.csv", output_dir / "distances.csv",
