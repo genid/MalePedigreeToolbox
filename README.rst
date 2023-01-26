@@ -169,7 +169,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt pairwise_mutations -af ./examples/example_alleles.csv -df output_folder/distances.csv -o output_folder -pf
+   $ mpt pairwise_mutation -af ./examples/example_alleles.csv -df output_folder/distances.csv -o output_folder -pf
 
 This always results in at least 2 files. Firstly, a full output file containing the number of mutations that occured
 between all individuals of a pedigree for all markers for each allele. Secondly, a summary output file that takes the mutations for
@@ -230,7 +230,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt dendrograms -fm output_folder/full_out.csv -mr ./examples/example_marker_rates.csv -o output_folder -t both
+   $ mpt dendrograms -fm output_folder/full_out.csv -mr ./examples/example_marker_rates.csv -o output_folder
 
 This will produce a dendrogram for each pedigree present in the full
 mutation distances file. Besides that text files are provided that contain the clusters, in order to easily get all the individuals of a certain cluster.
