@@ -134,12 +134,12 @@ Running
 There are a number of different functionalities that can be used from this toolkit. Here follows an explanation for each
 of these functionalities with some example in and outputs. The examples are for the command line but the same applies
 for the inputs of the GUI unless stated otherwise. Alternatively you can always make use of -h or --help to get an
-overview of all options available for a certain subcommand. The example data used and demonstrated can be downloaded from the `examples <./examples>`_ folder.
+overview of all options available for a certain subcommand. The example data used and demonstrated can be downloaded from the `examples <./examples>`_ folder. The commands are in order since data from previous commands feed into later ones. If you follow the examples in order you should be able to run all commands using the example and generated data.
 
 Pedigree investigation commands
 -------------------------------
 
-These are commands that can be used to investigate pedigrees in a number of ways.
+These are commands that can be used to investigate pedigrees in a number of ways. 
 
 Meiotic distances in pedigrees (distance)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,7 +151,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt distances -t example_tgfs -o output_folder
+   $ mpt distances -t ./examples/example_tgfs -o output_folder
 
 This will create a comma separated values (csv) file containing the generational distance between all individuals for
 each pedigree in the specified output folder.
@@ -161,7 +161,7 @@ Counting mutations between alleles of markers (mut_diff)
 
 Get the number of mutations between all alleles for all markers in pedigrees. The input for this command is an alleles
 file. This is a .csv file that contains the alleles for each marker of one or more pedigrees. An Example of an alleles
-filecan be found at `examples/example_alleles.csv <./examples/example_alleles.csv>`_. The number of alleles does not have
+file can be found at `examples/example_alleles.csv <./examples/example_alleles.csv>`_. The number of alleles does not have
 to be 6. Optionally the distances between all individuals of the different pedigrees can be provided
 (this can be generated with the `distance <#meiotic-distances-in-pedigrees-distance>`_ command).
 
@@ -169,12 +169,12 @@ Example command:
 
 .. code-block::
 
-   $ mpt mut_diff -af example_alleles.csv -df distances_output_folder/distances.csv -o output_folder
+   $ mpt pairwise_mutations -af ./examples/example_alleles.csv -df output_folder/distances.csv -o output_folder -pf
 
 This always results in at least 2 files. Firstly, a full output file containing the number of mutations that occured
 between all individuals of a pedigree for all markers for each allele. Secondly, a summary output file that takes the mutations for
 all markers together and shows the number of mutations between all individuals of a pedigree. If a distance file was
-specified then percentage of mutation is calculated for each number of meiosis present in the provided pedigrees. The -pf
+specified then a percentage of mutation is calculated for each number of meiosis present in the provided pedigrees. The -pf
 flag can be specified as well to generate a file that can be used to simulate data for creating machine learning models
 for the prediction of generational distance.
 
@@ -189,10 +189,10 @@ Example command:
 
 .. code-block::
 
-   $ mpt ped_mut_graph -af example_allelles.csv -t example_tgfs -o output_folder
+   $ mpt pedigree_mutation -af ./examples/example_alleles.csv -t ./examples/example_tgfs -o output_folder
 
 This will generate a pedigree for each marker containing the number of mutations that occured between descendants in the
-pedigree. It will also contain an overview graph for each pedigreewhere all unique sets of alleles get their own color.
+pedigree. It will also contain an overview graph for each pedigree where all unique sets of alleles get their own color.
 Each pedigree also gets a file with mutation rates for each marker based on that pedigree. Finally, a file that summarizes
 all these mutation rates for all pedigrees is also generated.
 
@@ -215,8 +215,8 @@ file giving information on what marker mutated on what edge. All edges where mut
 the number of mutations that occured. Keep in mind that these mutations are placed at the first edge they
 could have occured.*
 
-Clustering alleles based on mutation distance (draw_pedigrees)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Clustering alleles based on mutation distance (dendrograms)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Identify likely related individuals based on the mutation distance of the alleles of measured markers. The input for
 this functionality is full list of mutation distances between all markers for all alleles (this can be generated with
@@ -230,11 +230,10 @@ Example command:
 
 .. code-block::
 
-   $ mpt draw_pedigrees -fm mut_diff_out/full_out.csv -mr example_marker_rates.csv -o output_folder -t both
+   $ mpt dendrograms -fm output_folder/full_out.csv -mr ./examples/example_marker_rates.csv -o output_folder -t both
 
-This will produce a dendrogram or multi-dimensional scaling (MDS) plot or both for each pedigree present in the full
-mutation distances file. Besides that text files are provided that contain the clusters, in order to easily work with
-get all the individuals of a certain cluster.
+This will produce a dendrogram for each pedigree present in the full
+mutation distances file. Besides that text files are provided that contain the clusters, in order to easily get all the individuals of a certain cluster.
 
 Run all the above commands in tandem (all)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -246,7 +245,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt all -af allele_file.csv -t tgf_folder -o output_folder
+   $ mpt all -af ./examples/example_alleles.csv -t ./examples/example_tgfs -o output_folder
 
 Pedigree prediction functions
 -----------------------------
@@ -269,7 +268,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt simulate -i marker_rate_file.csv -o output_folder -n 10000 -g 50
+   $ mpt simulate -i output_folder/marker_rate_file.csv -o output_folder -n 10000 -g 50
 
 This will generate one file containing the simulated mutations for each marker of each individual
 over all generations. We recommend generating for at least 10.000 individuals per generation. An example of  the
@@ -288,10 +287,10 @@ Example command (this command runs for a long time):
 
 .. code-block::
 
-   $ mpt make_models -i simulated_data.csv -o output_folder -mt MLP LDA -c -1
+   $ mpt make_models -i output_folder/simulated_data.csv -o output_folder -mt LDA -c -1
 
 This will create a pickled RandomizedSearchCV object containing the model. These can be used by the final component of
-these comands to predict the generational distance between individuals.
+these commands to predict the generational distance between individuals.
 
 Predict generational distance (predict)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -312,11 +311,11 @@ file can be generated from an alleles file with the help of the
 `mut_diff <#counting-mutations-between-alleles-of-markers-mut_diff>`_ command. The file should look the same as the
 `examples/example_simulated.csv <./examples/example_predict_input.csv>`__.
 
-Example command:
+Example command with a pre-defined model:
 
 .. code-block::
 
-   $ mpt predict -i marker_mutation_observations.csv -o output_folder -m model_file.joblib -tf simulated_data.csv
+   $ mpt predict -pm YFP -i output_folder/predict_out.csv
 
 Full example
 ============
