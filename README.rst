@@ -134,7 +134,7 @@ Running
 There are a number of different functionalities that can be used from this toolkit. Here follows an explanation for each
 of these functionalities with some example in and outputs. The examples are for the command line but the same applies
 for the inputs of the GUI unless stated otherwise. Alternatively you can always make use of -h or --help to get an
-overview of all options available for a certain subcommand.
+overview of all options available for a certain subcommand. The example data used and demonstrated can be downloaded from the `examples <./examples>`_ folder.
 
 Pedigree investigation commands
 -------------------------------
@@ -153,7 +153,7 @@ Example command:
 
    $ mpt distances -t example_tgfs -o output_folder
 
-This will create a comma separated values (csv) file containing the generational distance between all individuals of
+This will create a comma separated values (csv) file containing the generational distance between all individuals for
 each pedigree in the specified output folder.
 
 Counting mutations between alleles of markers (mut_diff)
