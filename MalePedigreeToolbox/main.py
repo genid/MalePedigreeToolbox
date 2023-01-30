@@ -214,7 +214,7 @@ class MyFormatter(logging.Formatter):
 def get_argument_parser() -> argparse.ArgumentParser:
     parser = CustomArgParser(description="Welcome to the male pedigree toolbox kit a toolbox for investigating "
                                          "pedigrees and estimating age based on y-chromosmal markers.",
-                             epilog="Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2021",)
+                             epilog="Created by: Arwin Ralf, Diego Montiel Gonzalez and Bram van Wersch, 2023",)
     parser.add_argument("-ll", "--log_level",
                         help="Configure the logger for printing a certain level of information. 'basic': just simple "
                              "output, debug: all output including issues, 'silent': no output except warnings",

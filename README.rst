@@ -137,7 +137,7 @@ for the inputs of the GUI unless stated otherwise. Alternatively you can always 
 overview of all options available for a certain subcommand. The example data used and demonstrated can be downloaded from the `examples <./examples>`_ folder. The commands are in order since data from previous commands feed into later ones. If you follow the examples in order you should be able to run all commands using the example and generated data.
 
 Pedigree investigation functions
--------------------------------
+--------------------------------
 
 These are commands that can be used to investigate pedigrees in a number of ways. 
 
