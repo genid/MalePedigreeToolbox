@@ -637,7 +637,7 @@ def plot_pedigree(
             if parent_node.sample is not None:
                 dot.node(parent_node.id, parent_node.sample, shape='box', style='filled', fillcolor=color)
             else:
-                dot.node(parent_node.id, parent_node.id, shape='box')
+                dot.node(parent_node.id, "", shape='box')
             child_nodes = [node for node in pedigree_marker_graph.get_children(parent_node) if node.allele is not None]
             # add edges
             for child_node in child_nodes:
@@ -723,7 +723,7 @@ def plot_full_pedigree(
     if next_nodes[0].sample is not None:
         dot.node(next_nodes[0].id, next_nodes[0].sample, shape='box', style='filled', fillcolor="white")
     else:
-        dot.node(next_nodes[0].id, next_nodes[0].id, shape='box', style='filled', fillcolor="white")
+        dot.node(next_nodes[0].id, "", shape='box', style='filled', fillcolor="white")
 
     allele_color_mapping = {next_nodes[0].allele_id(): "white"}
     edge_change_dict = {}
@@ -760,7 +760,7 @@ def plot_full_pedigree(
                 if child_node.sample is not None:
                     dot.node(child_node.id, child_node.sample, shape='box', style='filled', fillcolor=color)
                 else:
-                    dot.node(child_node.id, child_node.id, shape='box', style='filled', fillcolor=color)
+                    dot.node(child_node.id, "", shape='box', style='filled', fillcolor=color)
 
             new_next_nodes.extend(child_nodes)
         next_nodes = new_next_nodes
