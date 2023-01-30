@@ -151,7 +151,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt distances -t ./examples/example_tgfs -o output_folder
+   $ mpt distances -t ./examples/Mutation_rate_example/tgf -o output_folder
 
 This will create a comma separated values (csv) file containing the generational distance between all individuals for
 each pedigree in the specified output folder.
@@ -169,7 +169,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt pairwise_mutation -af ./examples/example_alleles.csv -df output_folder/distances.csv -o output_folder -pf
+   $ mpt pairwise_mutation -af ./examples/Mutation_rate_example/Alleles_example.csv -df output_folder/distances.csv -o output_folder -pf
 
 This always results in at least 2 files. Firstly, a full output file containing the number of mutations that occured
 between all individuals of a pedigree for all markers for each allele. Secondly, a summary output file that takes the mutations for
@@ -189,7 +189,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt pedigree_mutation -af ./examples/example_alleles.csv -t ./examples/example_tgfs -o output_folder
+   $ mpt pedigree_mutation -af ./examples/Mutation_rate_example/Alleles_example.csv -t ./examples/Mutation_rate_example/tgf -o output_folder
 
 This will generate a pedigree for each marker containing the number of mutations that occured between descendants in the
 pedigree. It will also contain an overview graph for each pedigree where all unique sets of alleles get their own color.
@@ -230,7 +230,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt dendrograms -fm output_folder/full_out.csv -mr ./examples/example_marker_rates.csv -o output_folder
+   $ mpt dendrograms -fm output_folder/full_out.csv -mr ./examples/Dendrogram_pedigree_example/example_mutation_rate.csv -o output_folder
 
 This will produce a dendrogram for each pedigree present in the full
 mutation distances file. Besides that text files are provided that contain the clusters, in order to easily get all the individuals of a certain cluster.
@@ -245,7 +245,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt all -af ./examples/example_alleles.csv -t ./examples/example_tgfs -o output_folder
+   $ mpt all -af ./examples/Mutation_rate_example/Alleles_example.csv -t ./examples/Mutation_rate_example/tgf -mr ./examples/Dendrogram_pedigree_example/example_mutation_rate.csv -o output_folder -pf
 
 Pedigree prediction functions
 -----------------------------
@@ -268,7 +268,7 @@ Example command:
 
 .. code-block::
 
-   $ mpt simulate -i output_folder/marker_rate_file.csv -o output_folder -n 10000 -g 50
+   $ mpt simulate -i ./examples/Mutation_rates_for_simulations/rates_RMplex_2stepmodel.xlsx -o output_folder -n 10000 -g 50
 
 This will generate one file containing the simulated mutations for each marker of each individual
 over all generations. We recommend generating for at least 10.000 individuals per generation. An example of  the
@@ -287,10 +287,10 @@ Example command (this command runs for a long time):
 
 .. code-block::
 
-   $ mpt make_models -i output_folder/simulated_data.csv -o output_folder -mt LDA -c -1
+   $ mpt make_models -i output_folder/simulation.csv -o output_folder -mt LDA -c -1
 
 This will create a pickled RandomizedSearchCV object containing the model. These can be used by the final component of
-these commands to predict the generational distance between individuals.
+these commands to predict the generational distance between individuals. Keep in mind that this command migth run for quite a while.
 
 Predict generational distance (predict)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -306,10 +306,11 @@ following marker sets have pre-computed models:
 * PPY23 + RMPLEX
 * YFP + RMPLEX
 
+If you want to see what markers are included for each of these combinations take a look at the `Mutation_rates_for_simulations <./examples/Mutation_rates_for_simulations>`__ folder.
+
 The input
 file can be generated from an alleles file with the help of the
-`mut_diff <#counting-mutations-between-alleles-of-markers-mut_diff>`_ command. The file should look the same as the
-`examples/example_simulated.csv <./examples/example_predict_input.csv>`__.
+`mut_diff <#counting-mutations-between-alleles-of-markers-mut_diff>`_ command.
 
 Example command with a pre-defined model:
 
@@ -317,51 +318,3 @@ Example command with a pre-defined model:
 
    $ mpt predict -pm YFP -i output_folder/predict_out.csv
 
-Full example
-============
-
-Here is an example for using the `all <#run-all-the-above-commands-in-tandem-all>`_ command using files provided in the
-`examples <./examples>`_ folder of this repository. The example is for the command line specifically but the provided
-output should be the same for the gui. Take note that the example command assumes that it is executed from MalePedigreeToolbox
-base folder.
-
-.. code-block::
-
-   $ mpt all --tgf_folder ./examples/example_tgfs/ --allele_file ./examples/example_alleles.csv --outdir ./output_directory --type both --random_state 5 --marker_rates ./examples/example_marker_rates.csv --clusters 2
-
-    INFO 15:11:57.464672 (0.004 sec) - Loading libraries...
-    INFO 15:12:04.859765 (7.399 sec) - Running all modules in tandem...
-    INFO 15:12:04.859927 (7.399 sec) -
-    INFO 15:12:04.859969 (7.399 sec) - Step 1/4
-    INFO 15:12:04.860012 (7.399 sec) - Started with calculating pairwise distances.
-    INFO 15:12:04.861764 (7.401 sec) - Finished calculating pairwise distances
-    INFO 15:12:04.861858 (7.401 sec) -
-    INFO 15:12:04.861897 (7.401 sec) - Step 2/4
-    INFO 15:12:04.861940 (7.401 sec) - Starting with calculating differentiation rates
-    INFO 15:12:04.870831 (7.410 sec) - Finished reading both input files
-    INFO 15:12:04.871125 (7.411 sec) - In total there are 49 markers that will be analysed.
-    WARNING 15:12:04.872397 (7.412 sec) - Marker (DYS1001) is not present in 1036648 and 1992767. The comparisson will be skipped.
-    INFO 15:12:04.874018 (7.413 sec) - Calculation progress: 45%...
-    INFO 15:12:05.259639 (7.799 sec) - Starting with writing mutation differentiation information to files
-    INFO 15:12:05.311114 (7.851 sec) - Started with summarising and writing meiosis differentiation rates to file
-    INFO 15:12:05.323806 (7.863 sec) - Finished calculating differentiation rates.
-    INFO 15:12:05.328681 (7.868 sec) -
-    INFO 15:12:05.328735 (7.868 sec) - Step 3/4
-    INFO 15:12:05.328782 (7.868 sec) - Starting with creating dendograms based on mutation differentiation
-    INFO 15:12:05.841020 (8.380 sec) - Calculation progress: 100%...
-    INFO 15:12:05.841089 (8.380 sec) - Finished drawing dendograms for all pedigrees that were present
-    INFO 15:12:05.841177 (8.381 sec) -
-    INFO 15:12:05.841211 (8.381 sec) - Step 4/4
-    INFO 15:12:05.841253 (8.381 sec) - Start with caclulating mutations from pedigrees
-    INFO 15:12:05.843494 (8.383 sec) - Processing pedigree 1
-    INFO 15:12:09.122974 (11.662 sec) - Processing pedigree 73
-    INFO 15:12:13.255955 (15.795 sec) - Calculation progress: 45%...
-    INFO 15:12:13.276336 (15.816 sec) - Finished calculating mutations from pedigrees
-    INFO 15:12:13.276672 (15.816 sec) - Finished running all modules
-    INFO 15:12:13.276811 (15.816 sec) - The log file can be found at './run.log'
-
-This will create all the files in a folder called output_directory located in the folder from which this command was
-executed as well as a run.log file containing similar information to what was put on the command line.
-
-Some additional notes when running analysis with the example files, when running the classifier_predict command with
-the example file you should use the YFP model since the example data is for that model.
