@@ -29,7 +29,7 @@ Contents
     * `Meiotic distances <#meiotic-distances-in-pedigrees-distance>`_
     * `Counting mutations between alleles <#counting-mutations-between-alleles-of-markers-mut_diff>`_
     * `Inferring pedigree mutation events <#infering-pedigree-mutation-events-ped_mut_graph>`_
-    * `Clustering alleles <#clustering-alleles-based-on-mutation-distance-draw_pedigrees>`_
+    * `Clustering alleles <#clustering-alleles-based-on-mutation-distance-dendrograms>`_
     * `Run it all <#run-all-the-above-commands-in-tandem-all>`_
 
   * Generational distance prediction
@@ -136,7 +136,7 @@ of these functionalities with some example in and outputs. The examples are for 
 for the inputs of the GUI unless stated otherwise. Alternatively you can always make use of -h or --help to get an
 overview of all options available for a certain subcommand. The example data used and demonstrated can be downloaded from the `examples <./examples>`_ folder. The commands are in order since data from previous commands feed into later ones. If you follow the examples in order you should be able to run all commands using the example and generated data.
 
-Pedigree investigation commands
+Pedigree investigation functions
 -------------------------------
 
 These are commands that can be used to investigate pedigrees in a number of ways. 
@@ -161,7 +161,7 @@ Counting mutations between alleles of markers (mut_diff)
 
 Get the number of mutations between all alleles for all markers in pedigrees. The input for this command is an alleles
 file. This is a .csv file that contains the alleles for each marker of one or more pedigrees. An Example of an alleles
-file can be found at `examples/example_alleles.csv <./examples/example_alleles.csv>`_. The number of alleles does not have
+file can be found at Alleles_example.csv <./examples/Mutation_rate_example/Alleles_example.csv>`_. The number of alleles does not have
 to be 6. Optionally the distances between all individuals of the different pedigrees can be provided
 (this can be generated with the `distance <#meiotic-distances-in-pedigrees-distance>`_ command).
 
@@ -220,8 +220,7 @@ Clustering alleles based on mutation distance (dendrograms)
 
 Identify likely related individuals based on the mutation distance of the alleles of measured markers. The input for
 this functionality is full list of mutation distances between all markers for all alleles (this can be generated with
-the `mut_diff <#counting-mutations-between-alleles-of-markers-mut_diff>`_ command). . For an example of
-a mutation rates file see `examples/example_marker_rates.csv <examples/example_marker_rates.csv>`_. Additionally, for more
+the `mut_diff <#counting-mutations-between-alleles-of-markers-mut_diff>`_ command). For examples of mutation rates files and mutation rates for a number of marker combinations see the `Mutation_rates_for_dendrograms <./examples/Mutation_rates_for_dendrograms>`_ folder. Additionally, for more
 accurate results you can also provide the mutation rates for all markers in a separate file. You can either define the
 number of clusters yourself or let the program calculate the optimal number using silhouette score to measure how
 good the clustering is.
@@ -257,8 +256,7 @@ Simulate alleles data (simulate) (command line only)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Simulate data for creating classification models based on mutation rates of markers. These mutation rates can be
-obtained from `ped_mut_graph <#infering-pedigree-mutation-events-ped_mut_graph>`_ or calculated yourself. For an example of
-a mutation rates file see `examples/example_marker_rates.csv <examples/example_marker_rates.csv>`_. This command
+obtained from `ped_mut_graph <#infering-pedigree-mutation-events-ped_mut_graph>`_ or calculated yourself. For examples of mutation rates files and mutation rates for a number of marker combinations see the `Mutation_rates_for_simulations <./examples/Mutation_rates_for_simulations>`_ folder. This command
 generates data for the `make_models <#create-classification-models-from-simulated-data-make_models-command-line-only>`_
 command in order to have a sufficiently large dataset to create the models from. You can specify the number of
 generations and the number of inidividuals per generation that you want to simulate. Each generation is simulated
@@ -271,8 +269,7 @@ Example command:
    $ mpt simulate -i ./examples/Mutation_rates_for_simulations/rates_RMplex_2stepmodel.xlsx -o output_folder -n 10000 -g 50
 
 This will generate one file containing the simulated mutations for each marker of each individual
-over all generations. We recommend generating for at least 10.000 individuals per generation. An example of  the
-simulated data can be found at `examples/example_simulated.csv <./examples/example_simulated.csv>`__.
+over all generations. We recommend generating for at least 10.000 individuals per generation.
 
 Create classification models from simulated data (make_models) (command line only)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -316,5 +313,5 @@ Example command with a pre-defined model:
 
 .. code-block::
 
-   $ mpt predict -pm YFP -i output_folder/predict_out.csv
+   $ mpt predict -pm YFP_RMPLEX -i ./examples/example_predict.csv -o output_folder
 
